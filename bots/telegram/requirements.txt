@@ -1,9 +1,31 @@
-python-telegram-bot==20.7
-anthropric>=0.40.0
-python-dotenv==1.0.0
-requests>=2.31.0
-pydantic>=2.0.0
+# Telegram Bot Framework
+python-telegram-bot==21.5
+
+# Anthropic Claude API
+anthropic==0.28.1
+
+# HTTP Client (async)
+aiohttp==3.9.4
+
+# Environment variables management
+python-dotenv==1.0.1
+
+# Database and ORM
 sqlalchemy>=2.0.0
 psycopg2-binary>=2.9.0
+
+# Async Redis (optional)
 aioredis>=2.0.0
-aiohttp>=3.9.0
+
+# Logging and monitoring (optional but recommended)
+python-json-logger==2.0.7
+
+# Type hints
+typing-extensions==4.10.0
+
+# For development and testing (optional)
+pytest==7.4.4
+pytest-asyncio==0.23.3
+black==24.1.1
+flake8==7.0.0
+pylint==3.0.3
