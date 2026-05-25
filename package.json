@@ -1,0 +1,68 @@
+{
+  "name": "saas-mejorado",
+  "version": "2.0.0",
+  "description": "AI-Powered Sales SaaS Platform with Multi-channel Bots and CRM",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "tsc --project backend/tsconfig.json",
+    "build:frontend": "cd frontend && npm run build",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "db:migrate": "prisma migrate deploy",
+    "db:push": "prisma db push",
+    "db:seed": "prisma db seed",
+    "docker:build": "docker build -t saas-mejorado .",
+    "docker:run": "docker run -p 3000:3000 saas-mejorado",
+    "docker:compose": "docker-compose up -d"
+  },
+  "keywords": [
+    "saas",
+    "crm",
+    "sales",
+    "bot",
+    "telegram",
+    "whatsapp",
+    "ai",
+    "multi-tenant",
+    "lead-management"
+  ],
+  "author": "then-10",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "dotenv": "^16.3.1",
+    "pg": "^8.11.3",
+    "axios": "^1.6.0",
+    "@prisma/client": "^5.0.0",
+    "jsonwebtoken": "^9.1.0",
+    "bcrypt": "^5.1.1",
+    "bull": "^4.11.4",
+    "socket.io": "^4.7.0",
+    "anthropic": "^0.40.0",
+    "body-parser": "^1.20.2",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0",
+    "@types/express": "^4.17.17",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.0",
+    "eslint": "^8.51.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "prisma": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
