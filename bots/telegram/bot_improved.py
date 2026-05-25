@@ -25,7 +25,11 @@ file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelnam
 logger.addHandler(file_handler)
 
 # Initialize Claude client
-client = Anthropic()
+try:
+        client = Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+except Exception as e:
+        logger.error(f'Failed to initialize Anthropic client: {e}')
+        client = None
 
 # Store conversations per user
 conversations = {}
