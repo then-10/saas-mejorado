@@ -2,9 +2,10 @@
 const nextConfig = {
   experimental: {
     serverActions: {
-      allowedOrigins: ['localhost:3001'],
+      allowedOrigins: ['*'],
     },
   },
+  output: 'standalone',
 }
 
 module.exports = nextConfig
