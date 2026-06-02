@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+}
+
+enum BusinessType {
+  RESTAURANTE
+  TIENDA_ROPA
+  CAFETERIA
+  OTRO
+}
+
+enum Plan {
+  BASICO
+  PROFESIONAL
+  ENTERPRISE
+}
+
+enum ClientStatus {
+  ACTIVO
+  SUSPENDIDO
+  PRUEBA
+}
+
+model AdminUser {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  name         String
+  role         AdminRole     @default(ADMIN)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  activityLogs ActivityLog[]
+}
+
+model Client {
+  id           String          @id @default(cuid())
+  name         String
+  email        String          @unique
+  phone        String?
+  businessType BusinessType    @default(OTRO)
+  plan         Plan            @default(BASICO)
+  status       ClientStatus    @default(PRUEBA)
+  contactName  String?
+  address      String?
+  city         String?
+  monthlyLeads Int             @default(0)
+  notes        String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  features     ClientFeature[]
+  activityLogs ActivityLog[]
+}
+
+model ClientFeature {
+  id          String    @id @default(cuid())
+  clientId    String
+  featureKey  String
+  enabled     Boolean   @default(false)
+  enabledAt   DateTime?
+  disabledAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([clientId, featureKey])
+}
+
+model ActivityLog {
+  id         String    @id @default(cuid())
+  adminId    String?
+  action     String
+  entityType String
+  entityId   String?
+  details    String?
+  createdAt  DateTime  @default(now())
+  admin      AdminUser? @relation(fields: [adminId], references: [id])
+  client     Client?   @relation(fields: [entityId], references: [id])
+}
