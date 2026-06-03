@@ -755,7 +755,7 @@ export default function ToolConfigPanel({ clientId, featureKey, initialValues, o
                 />
               )}
 
-              {field.help && field.type !== 'info' && (
+              {field.help && (
                 <p className="text-xs text-gray-400 mt-1">{field.help}</p>
               )}
             </div>
