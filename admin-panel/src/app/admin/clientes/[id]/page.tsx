@@ -10,6 +10,7 @@ async function getClient(id: string) {
     where: { id },
     include: {
       features: true,
+      config: true,
       activityLogs: {
         orderBy: { createdAt: 'desc' },
         take: 20,
@@ -43,6 +44,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
   if (!client) notFound()
 
   const featureMap = Object.fromEntries(client.features.map((f) => [f.featureKey, f]))
+  const configMap = (client.config?.config ?? {}) as Record<string, Record<string, string>>
 
   return (
     <div className="space-y-6">
@@ -138,6 +140,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
               clientId={client.id}
               features={Object.values(FEATURES)}
               featureMap={featureMap}
+              configMap={configMap}
             />
           </div>
 

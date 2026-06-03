@@ -59,6 +59,15 @@ model Client {
   updatedAt    DateTime        @updatedAt
   features     ClientFeature[]
   activityLogs ActivityLog[]
+  config       ClientConfig?
+}
+
+model ClientConfig {
+  id        String   @id @default(cuid())
+  clientId  String   @unique
+  config    Json     @default("{}")
+  updatedAt DateTime @updatedAt
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
 
 model ClientFeature {
