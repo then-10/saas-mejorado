@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 // In-memory daily counter — resets with each deploy.
@@ -9,23 +11,37 @@ function getTodayKey(): string {
   return new Date().toISOString().slice(0, 10) // YYYY-MM-DD
 }
 
-function getUsage(clientId: string): number {
+function getUsage(clientId: string, today: string): number {
   const entry = dailyUsage.get(clientId)
-  if (!entry || entry.date !== getTodayKey()) return 0
+  if (!entry || entry.date !== today) return 0
   return entry.count
 }
 
-function incrementUsage(clientId: string): void {
-  const today = getTodayKey()
+// Returns the new count after increment.
+function incrementUsage(clientId: string, today: string): number {
   const current = dailyUsage.get(clientId)
-  if (!current || current.date !== today) {
-    dailyUsage.set(clientId, { count: 1, date: today })
-  } else {
-    dailyUsage.set(clientId, { count: current.count + 1, date: today })
+  const newCount = (!current || current.date !== today) ? 1 : current.count + 1
+  dailyUsage.set(clientId, { count: newCount, date: today })
+  return newCount
+}
+
+function isAuthorized(req: NextRequest): boolean {
+  // Bot-to-server calls use a shared secret in the Authorization header.
+  const botSecret = process.env.BOT_API_SECRET
+  if (botSecret) {
+    const authHeader = req.headers.get('authorization') ?? ''
+    if (authHeader === `Bearer ${botSecret}`) return true
   }
+  return false
 }
 
 export async function POST(req: NextRequest) {
+  // Accept either an authenticated admin session or the bot shared secret.
+  const session = await getServerSession(authOptions)
+  if (!session && !isAuthorized(req)) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
   const apiKey = process.env.IMAGE_GEN_API_KEY
   if (!apiKey) {
     return NextResponse.json(
@@ -47,8 +63,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'clientId y prompt son requeridos' }, { status: 400 })
   }
 
-  if (prompt.trim().length < 3) {
+  const trimmedPrompt = prompt.trim()
+  if (trimmedPrompt.length < 3) {
     return NextResponse.json({ error: 'El prompt es demasiado corto' }, { status: 400 })
+  }
+
+  if (trimmedPrompt.length > 4000) {
+    return NextResponse.json({ error: 'El prompt es demasiado largo (máx 4000 caracteres)' }, { status: 400 })
   }
 
   // Verify client exists and has the feature enabled
@@ -68,24 +89,35 @@ export async function POST(req: NextRequest) {
   const allConfig = (feature.client.config?.config ?? {}) as Record<string, Record<string, string>>
   const config = allConfig['generacion_imagenes'] ?? {}
 
-  const dailyLimit = parseInt(config['daily_limit'] ?? '10', 10)
+  // Parse daily limit — guard against NaN (e.g. empty string from a stale config row)
+  const rawLimit = parseInt(config['daily_limit'] ?? '10', 10)
+  const dailyLimit = isNaN(rawLimit) ? 10 : rawLimit
+
   const size = (config['default_size'] ?? '1024x1024') as '1024x1024' | '1792x1024' | '1024x1792'
   const quality = (config['default_quality'] ?? 'standard') as 'standard' | 'hd'
   const style = (config['style_preset'] ?? 'vivid') as 'vivid' | 'natural'
   const systemContext = config['system_context'] ?? ''
   const watermark = config['watermark_text'] ?? ''
 
-  // Check daily limit
-  if (dailyLimit > 0 && getUsage(clientId) >= dailyLimit) {
+  const today = getTodayKey()
+
+  // Atomic check-and-increment: both run synchronously before any await,
+  // so concurrent requests in the same Node.js process cannot both pass.
+  if (dailyLimit > 0 && getUsage(clientId, today) >= dailyLimit) {
     const limitMsg = config['limit_reached_message'] ?? 'Límite diario de imágenes alcanzado.'
     return NextResponse.json({ error: limitMsg, limitReached: true }, { status: 429 })
   }
+  // Increment now — before the async DALL-E call — to hold the slot.
+  const usageAfter = incrementUsage(clientId, today)
 
-  // Build the final prompt
+  // Build the final prompt — strip quotes from watermark to prevent prompt injection
+  const safeWatermark = watermark.replace(/["']/g, '')
   const parts: string[] = []
   if (systemContext) parts.push(systemContext)
-  parts.push(prompt.trim())
-  if (watermark) parts.push(`Include the text "${watermark}" subtly in the image as a watermark or brand element.`)
+  parts.push(trimmedPrompt)
+  if (safeWatermark) {
+    parts.push(`Include the text "${safeWatermark}" subtly in the image as a watermark or brand element.`)
+  }
   const finalPrompt = parts.join('. ')
 
   // Call OpenAI DALL-E 3
@@ -127,36 +159,40 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  incrementUsage(clientId)
-
-  // Log generation in ActivityLog
+  // Log generation in ActivityLog — awaited so the write completes before the response.
   await prisma.activityLog.create({
     data: {
       action: `Imagen generada vía ${channel}`,
       entityType: 'Client',
       entityId: clientId,
-      details: `Prompt: "${prompt.slice(0, 100)}" | Size: ${size} | Quality: ${quality}`,
+      details: `Prompt: "${trimmedPrompt.slice(0, 100)}" | Size: ${size} | Quality: ${quality}`,
     },
-  }).catch(() => {})
+  }).catch((err) => console.error('ActivityLog write failed:', err))
 
   return NextResponse.json({
     imageUrl,
     prompt: finalPrompt,
     size,
     quality,
-    usageToday: getUsage(clientId),
+    usageToday: usageAfter,
     dailyLimit,
   })
 }
 
-// GET: return usage stats for a client (admin use)
+// GET: return usage stats for a client (admin use — requires session or bot secret)
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session && !isAuthorized(req)) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(req.url)
   const clientId = searchParams.get('clientId')
-  if (!clientId) return NextResponse.json({ error: 'clientId required' }, { status: 400 })
+  if (!clientId) return NextResponse.json({ error: 'clientId requerido' }, { status: 400 })
 
+  const today = getTodayKey()
   return NextResponse.json({
-    usageToday: getUsage(clientId),
-    date: getTodayKey(),
+    usageToday: getUsage(clientId, today),
+    date: today,
   })
 }
