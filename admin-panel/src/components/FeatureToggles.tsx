@@ -18,6 +18,7 @@ const CONFIGURABLE_FEATURES = new Set([
   'menu_digital', 'catalogo_digital', 'reservaciones',
   'crm_basico', 'crm_avanzado', 'analytics_basico', 'analytics_avanzado',
   'notificaciones_email', 'notificaciones_sms', 'soporte_prioritario',
+  'generacion_imagenes',
 ])
 
 export default function FeatureToggles({ clientId, features, featureMap, configMap }: Props) {
@@ -152,6 +153,7 @@ function FeatureIcon({ icon }: { icon: string }) {
     Mail: '📧',
     MessageCircle: '💌',
     Headphones: '🎧',
+    ImagePlus: '🎨',
   }
   return <span>{icons[icon] || '⚙️'}</span>
 }

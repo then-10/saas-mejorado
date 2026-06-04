@@ -40,6 +40,14 @@ user_last_message_time = {}  # For rate limiting
 API_BASE_URL = os.getenv('API_BASE_URL', 'http://localhost:3000/api')
 BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 
+# Image generation config
+ADMIN_PANEL_URL = os.getenv('ADMIN_PANEL_URL', 'http://localhost:3001')
+CLIENT_ID = os.getenv('CLIENT_ID', '')  # Prisma ID of this client in the admin panel
+
+# Keywords that trigger image generation (can also be set per-client in admin panel)
+DEFAULT_IMAGE_KEYWORDS = ['genera una imagen', 'crea una imagen', 'diseña una imagen',
+                          'hazme una imagen', 'imagen de', 'foto de', 'ilustración de']
+
 # Cleanup old conversations to prevent memory leaks
 def cleanup_old_conversations():
     """Clean up old conversations to prevent memory leaks"""
@@ -112,6 +120,32 @@ class SalesBotManager:
 
 bot_manager = SalesBotManager(API_BASE_URL)
 
+
+async def generate_image_for_client(prompt: str) -> dict:
+    """
+    Call the admin panel image-gen API to generate an image via DALL-E 3.
+    Returns dict with 'imageUrl' on success, or 'error' on failure.
+    """
+    if not CLIENT_ID:
+        return {'error': 'CLIENT_ID no configurado en las variables de entorno del bot.'}
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                f'{ADMIN_PANEL_URL}/api/image-gen',
+                json={'clientId': CLIENT_ID, 'prompt': prompt, 'channel': 'telegram'},
+                timeout=aiohttp.ClientTimeout(total=60),  # DALL-E can take ~15s
+            ) as resp:
+                data = await resp.json()
+                if resp.status == 200:
+                    return data
+                return {'error': data.get('error', 'Error desconocido al generar imagen.')}
+    except asyncio.TimeoutError:
+        return {'error': 'La generación tardó demasiado. Intenta de nuevo.'}
+    except Exception as e:
+        logger.error(f'Image generation error: {e}')
+        return {'error': 'No se pudo conectar al servicio de imágenes.'}
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Start command handler"""
     user_name = update.effective_user.first_name
@@ -162,6 +196,28 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             return
 
     user_last_message_time[user_id] = now
+
+    # Detect image generation request in natural language
+    msg_lower = user_message.lower()
+    if any(kw in msg_lower for kw in DEFAULT_IMAGE_KEYWORDS):
+        await update.message.chat.send_action("upload_photo")
+        await update.message.reply_text("🎨 Detecté que quieres una imagen. Generando con IA...")
+        result = await generate_image_for_client(user_message)
+        if 'imageUrl' in result:
+            caption = f"✨ *Imagen generada*\n📝 _{user_message[:200]}_"
+            try:
+                await update.message.reply_photo(
+                    photo=result['imageUrl'],
+                    caption=caption,
+                    parse_mode='Markdown'
+                )
+            except Exception:
+                await update.message.reply_text(
+                    f"✅ Imagen generada:\n{result['imageUrl']}"
+                )
+        else:
+            await update.message.reply_text(f"❌ {result.get('error', 'Error generando imagen.')}")
+        return
 
     # Show typing indicator
     await update.message.chat.send_action("typing")
@@ -287,6 +343,55 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     elif query.data == 'skip_lead':
         await query.edit_message_text("De acuerdo. Continuemos...")
 
+async def imagen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle /imagen command — generate an image with DALL-E 3"""
+    user_id = update.effective_user.id
+
+    # Get the prompt from the command arguments
+    prompt = ' '.join(context.args).strip() if context.args else ''
+    if not prompt:
+        await update.message.reply_text(
+            "🎨 *Generación de Imágenes con IA*\n\n"
+            "Uso: `/imagen <descripción de lo que quieres>`\n\n"
+            "Ejemplos:\n"
+            "• `/imagen un vestido rojo elegante sobre fondo blanco`\n"
+            "• `/imagen banner publicitario de ropa de verano`\n"
+            "• `/imagen catálogo de blusas floreadas estilo boutique`",
+            parse_mode='Markdown'
+        )
+        return
+
+    await update.message.chat.send_action("upload_photo")
+    await update.message.reply_text("🎨 Generando tu imagen, espera un momento...")
+
+    logger.info(f'Image request from user {user_id}: {prompt}')
+    result = await generate_image_for_client(prompt)
+
+    if 'imageUrl' in result:
+        caption = f"✨ *Imagen generada*\n📝 _{prompt[:200]}_"
+        try:
+            await update.message.reply_photo(
+                photo=result['imageUrl'],
+                caption=caption,
+                parse_mode='Markdown'
+            )
+            remaining = result.get('dailyLimit', 0) - result.get('usageToday', 0)
+            if result.get('dailyLimit', 0) > 0:
+                await update.message.reply_text(
+                    f"📊 Imágenes restantes hoy: *{remaining}*",
+                    parse_mode='Markdown'
+                )
+        except Exception as e:
+            logger.error(f'Error sending photo: {e}')
+            await update.message.reply_text(
+                f"✅ Imagen generada:\n{result['imageUrl']}\n\n"
+                "(Copia y pega el link en tu navegador)"
+            )
+    else:
+        error_msg = result.get('error', 'No se pudo generar la imagen.')
+        await update.message.reply_text(f"❌ {error_msg}")
+
+
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Reset conversation"""
     user_id = update.effective_user.id
@@ -324,6 +429,7 @@ def main():
     # Add handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("reset", reset))
+    app.add_handler(CommandHandler("imagen", imagen))
     app.add_handler(CallbackQueryHandler(handle_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 

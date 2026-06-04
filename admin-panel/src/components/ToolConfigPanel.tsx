@@ -671,6 +671,101 @@ vendedor2@negocio.com`,
       },
     ],
   },
+
+  generacion_imagenes: {
+    title: 'Configurar Generación de Imágenes IA',
+    fields: [
+      {
+        key: 'api_info',
+        label: '',
+        type: 'info',
+        help: '🎨 El servicio usa DALL-E 3 (OpenAI). La API Key se configura centralmente en Railway — no necesitas hacer nada más que ajustar las opciones de este cliente.',
+      },
+      {
+        key: 'daily_limit',
+        label: 'Límite de imágenes por día',
+        type: 'select',
+        options: [
+          { value: '5', label: '5 imágenes / día' },
+          { value: '10', label: '10 imágenes / día' },
+          { value: '20', label: '20 imágenes / día' },
+          { value: '50', label: '50 imágenes / día (Enterprise)' },
+          { value: '0', label: 'Sin límite' },
+        ],
+        help: 'Cada imagen DALL-E 3 cuesta aprox. $0.04 USD. Ajusta según el plan del cliente.',
+      },
+      {
+        key: 'default_size',
+        label: 'Tamaño de imagen por defecto',
+        type: 'select',
+        options: [
+          { value: '1024x1024', label: '1024×1024 — Cuadrada (catálogos, productos)' },
+          { value: '1792x1024', label: '1792×1024 — Horizontal (banners, portadas)' },
+          { value: '1024x1792', label: '1024×1792 — Vertical (stories, flyers)' },
+        ],
+      },
+      {
+        key: 'default_quality',
+        label: 'Calidad de imagen',
+        type: 'select',
+        options: [
+          { value: 'standard', label: 'Estándar (~$0.04/imagen) — Recomendado' },
+          { value: 'hd', label: 'HD (~$0.08/imagen) — Mayor detalle' },
+        ],
+      },
+      {
+        key: 'style_preset',
+        label: 'Estilo visual del negocio',
+        type: 'select',
+        options: [
+          { value: 'vivid', label: '✨ Vívido — Colores intensos, más dramático' },
+          { value: 'natural', label: '🌿 Natural — Realista, menos saturado' },
+        ],
+        help: 'DALL-E 3 usa este estilo como base. El cliente puede pedirlo diferente en cada solicitud.',
+      },
+      {
+        key: 'system_context',
+        label: 'Contexto del negocio para las imágenes',
+        type: 'textarea',
+        rows: 3,
+        placeholder: 'Tienda de ropa femenina. Estilo moderno y elegante. Colores corporativos: blanco, dorado y negro. Público: mujeres 25-45 años.',
+        help: 'Este contexto se agrega automáticamente a cada prompt. Ayuda a mantener coherencia de marca.',
+      },
+      {
+        key: 'watermark_text',
+        label: 'Marca de agua (texto)',
+        type: 'text',
+        placeholder: '@prats_shop',
+        help: 'Se agrega al prompt para que DALL-E incluya el texto en la imagen. Deja vacío para no usar.',
+      },
+      {
+        key: 'trigger_keywords',
+        label: 'Palabras que activan la generación',
+        type: 'text',
+        placeholder: 'imagen, foto, diseña, crea, genera',
+        help: 'El bot detecta estas palabras en el mensaje del cliente para activar DALL-E. Separadas por coma.',
+      },
+      {
+        key: 'intro_message',
+        label: 'Mensaje antes de enviar la imagen',
+        type: 'text',
+        placeholder: '🎨 Generando tu imagen, espera un momento...',
+        help: 'Mensaje que el bot envía mientras DALL-E procesa la solicitud (tarda ~10 segundos).',
+      },
+      {
+        key: 'error_message',
+        label: 'Mensaje si falla la generación',
+        type: 'text',
+        placeholder: 'Lo siento, no pude generar esa imagen. Intenta con una descripción diferente.',
+      },
+      {
+        key: 'limit_reached_message',
+        label: 'Mensaje si se alcanza el límite diario',
+        type: 'text',
+        placeholder: 'Has alcanzado el límite de imágenes por hoy. Vuelve mañana o contacta al administrador.',
+      },
+    ],
+  },
 }
 
 export default function ToolConfigPanel({ clientId, featureKey, initialValues, onSaved }: Props) {
