@@ -1,3 +1,4 @@
+// Activity log page
 import { prisma } from '@/lib/prisma'
 
 async function getActivity() {
