@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS saas_clients (
   status VARCHAR(20) DEFAULT 'active',
   api_key VARCHAR(100) UNIQUE,
   webhook_url VARCHAR(255),
+  telegram_chat_id VARCHAR(255) UNIQUE,
   max_users INT DEFAULT 10,
   max_leads INT DEFAULT 1000,
   storage_limit BIGINT DEFAULT 10737418240,
@@ -125,6 +126,9 @@ CREATE TABLE IF NOT EXISTS sales_metrics (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Índice para búsquedas por telegram_chat_id
+CREATE INDEX IF NOT EXISTS idx_clients_telegram_chat_id ON saas_clients(telegram_chat_id);
+
 -- ==================== INDEXES ====================
 CREATE INDEX idx_users_client ON users(client_id);
 CREATE INDEX idx_leads_client ON sales_leads(client_id);
@@ -133,3 +137,4 @@ CREATE INDEX idx_leads_created ON sales_leads(created_at);
 CREATE INDEX idx_chat_logs_client ON chat_logs(client_id);
 CREATE INDEX idx_chat_logs_created ON chat_logs(created_at);
 CREATE INDEX idx_metrics_date ON sales_metrics(date);
+
