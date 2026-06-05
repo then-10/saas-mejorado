@@ -773,24 +773,34 @@ export default function ToolConfigPanel({ clientId, featureKey, initialValues, o
   const [values, setValues] = useState<Record<string, string>>(initialValues)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   if (!toolConfig) return null
 
   const handleChange = (key: string, value: string) => {
     setValues((prev) => ({ ...prev, [key]: value }))
     setSaved(false)
+    setSaveError(null)
   }
 
   const handleSave = async () => {
     setSaving(true)
+    setSaved(false)
+    setSaveError(null)
     try {
-      await fetch(`/api/admin/clientes/${clientId}/config`, {
+      const res = await fetch(`/api/admin/clientes/${clientId}/config`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ featureKey, values }),
       })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error((data as { error?: string }).error ?? `Error ${res.status}`)
+      }
       setSaved(true)
       onSaved()
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Error al guardar')
     } finally {
       setSaving(false)
     }
@@ -857,7 +867,7 @@ export default function ToolConfigPanel({ clientId, featureKey, initialValues, o
           )
         })}
 
-        <div className="flex items-center gap-3 pt-2 border-t border-gray-100">
+        <div className="flex items-center gap-3 pt-2 border-t border-gray-100 flex-wrap">
           <button
             onClick={handleSave}
             disabled={saving}
@@ -868,6 +878,11 @@ export default function ToolConfigPanel({ clientId, featureKey, initialValues, o
           {saved && (
             <span className="text-xs text-green-600 font-medium flex items-center gap-1">
               <span>✓</span> Guardado
+            </span>
+          )}
+          {saveError && (
+            <span className="text-xs text-red-600 font-medium flex items-center gap-1">
+              <span>✗</span> {saveError}
             </span>
           )}
         </div>

@@ -35,11 +35,12 @@ export default function FeatureToggles({ clientId, features, featureMap, configM
     setLocalState((prev) => ({ ...prev, [featureKey]: newValue }))
 
     try {
-      await fetch(`/api/admin/clientes/${clientId}/features`, {
+      const res = await fetch(`/api/admin/clientes/${clientId}/features`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ featureKey, enabled: newValue }),
       })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       router.refresh()
     } catch {
       setLocalState((prev) => ({ ...prev, [featureKey]: !newValue }))
