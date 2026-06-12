@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { resolveStore, unauthorizedTenant } from "@/lib/shop/tenant";
 import { verifyCustomer, unauthorizedCustomer } from "@/lib/shop/customer-auth";
 import { getPaymentProvider } from "@/lib/shop/payments/getPaymentProvider";
-import { serializeOrder } from "@/lib/shop/serialize";
+import { applyPaidPayment } from "@/lib/shop/payments/applyPaidPayment";
 
 /**
  * POST /api/shop/orders/:id/payments
@@ -20,9 +20,6 @@ export async function POST(
   if (!store) return unauthorizedTenant();
 
   const customer = await verifyCustomer(req, store.id);
-  if (!customer) return unauthorizedCustomer();;
-  if (!store) return unauthorizedTenant();
-  const customer = await verifyCustomer(req, store.id);
   if (!customer) return unauthorizedCustomer();
 
   try {
@@ -33,7 +30,7 @@ export async function POST(
 
     const order = await prisma.order.findFirst({
       where: { id: params.id, storeId: store.id, customerId: customer.customerId },
-      include: { items: true, payments: true },
+      include: { items: true, payments: true, layaway: true },
     });
     if (!order) {
       return NextResponse.json({ error: "Pedido no encontrado" }, { status: 404 });
@@ -45,6 +42,19 @@ export async function POST(
       );
     }
 
+    // LAYAWAY: este endpoint cobra el ANTICIPO (primer pago). Los abonos
+    // posteriores van por POST /api/shop/layaways/:id/payments.
+    if (order.type === "LAYAWAY" && order.layaway && Number(order.layaway.paidAmount) > 0) {
+      return NextResponse.json(
+        { error: "El anticipo ya fue pagado; usa el endpoint de abonos del apartado" },
+        { status: 422 }
+      );
+    }
+    const chargeAmount =
+      order.type === "LAYAWAY" && order.layaway
+        ? Number(order.layaway.depositAmount)
+        : Number(order.total);
+
     // Pago en tienda: sin proveedor, solo registrar
     if (method === "CASH_IN_STORE") {
       const payment = await prisma.payment.create({
@@ -52,7 +62,7 @@ export async function POST(
           orderId: order.id,
           method: "CASH_IN_STORE",
           status: "PENDING",
-          amount: order.total,
+          amount: new Prisma.Decimal(chargeAmount),
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 días
         },
       });
@@ -74,18 +84,18 @@ export async function POST(
       if (method === "CARD") {
         result = await provider.createCardCharge(
           { ...order, store },
-          Number(order.total)
+          chargeAmount
         );
       } else if (method === "SPEI") {
         result = await provider.createSpeiCharge(
           { ...order, store },
-          Number(order.total)
+          chargeAmount
         );
       } else {
         // CASH_OXXO
         result = await provider.createCashCharge(
           { ...order, store },
-          Number(order.total)
+          chargeAmount
         );
       }
     } catch (e) {
@@ -102,7 +112,7 @@ export async function POST(
         provider: store.paymentProvider,
         method: method as any,
         status: "PENDING",
-        amount: order.total,
+        amount: new Prisma.Decimal(chargeAmount),
         externalId: result.externalId,
         reference: result.reference,
         expiresAt: result.expiresAt,
@@ -139,9 +149,6 @@ export async function GET(
   const store = await resolveStore(req);
   if (!store) return unauthorizedTenant();
 
-  const customer = await verifyCustomer(req, store.id);
-  if (!customer) return unauthorizedCustomer();;
-  if (!store) return unauthorizedTenant();
   const customer = await verifyCustomer(req, store.id);
   if (!customer) return unauthorizedCustomer();
 
@@ -181,20 +188,15 @@ export async function GET(
     const provider = getPaymentProvider(store);
     const result = await provider.verifyPayment(payment.externalId);
 
-    // Actualizar estado en BD si cambió
-    if (result.status !== payment.status) {
-      const newStatus = result.status === "paid" ? "PAID" : "FAILED";
+    // Aplicar el resultado con la lógica compartida (idempotente y
+    // consciente de apartados: abonos incrementan paidAmount).
+    if (result.status === "paid") {
+      await applyPaidPayment(payment.id);
+    } else if (result.status === "failed" && payment.status === "PENDING") {
       await prisma.payment.update({
         where: { id: payment.id },
-        data: { status: newStatus, paidAt: result.paidAt },
+        data: { status: "FAILED" },
       });
-
-      if (newStatus === "PAID") {
-        await prisma.order.update({
-          where: { id: params.id },
-          data: { status: "PAID" },
-        });
-      }
     }
 
     return NextResponse.json({
