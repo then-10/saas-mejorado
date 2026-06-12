@@ -56,3 +56,39 @@ export function serializeOrder(o: FullOrder) {
       : null,
   }
 }
+
+export function serializeLayaway(l: {
+  id: string
+  orderId: string
+  depositAmount: unknown
+  paidAmount: unknown
+  dueDate: Date
+  status: string
+  order?: {
+    id: string
+    total: unknown
+    status: string
+    createdAt: Date
+    items?: { productName: string; quantity: number }[]
+    payments?: { id: string; amount: unknown; method: string; status: string; paidAt: Date | null }[]
+  } | null
+}) {
+  return {
+    id: l.id,
+    orderId: l.orderId,
+    depositAmount: dec(l.depositAmount),
+    paidAmount: dec(l.paidAmount),
+    dueDate: l.dueDate,
+    status: l.status,
+    order: l.order
+      ? {
+          id: l.order.id,
+          total: dec(l.order.total),
+          status: l.order.status,
+          createdAt: l.order.createdAt,
+          items: l.order.items ?? [],
+          payments: (l.order.payments ?? []).map((p) => ({ ...p, amount: dec(p.amount) })),
+        }
+      : null,
+  }
+}
