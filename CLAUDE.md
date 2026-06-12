@@ -1,3 +1,9 @@
+> ⚠️ **ANTES DE CUALQUIER TAREA**: lee `ESTADO_PROYECTO.md` (checkpoint de sesión)
+> y ejecuta su auditoría git. Tras compactación o corte de tokens es la ÚNICA fuente
+> confiable del estado. Actualízalo y commitéalo después de cada paso significativo.
+> Agentes en `.claude/agents/`: progress-tracker (abrir/cerrar sesión), debugger
+> (errores: causa raíz primero), code-reviewer y security-auditor (antes de commit).
+
 # SaaS Mejorado — Claude Code Project Guide
 
 ## Project Overview
