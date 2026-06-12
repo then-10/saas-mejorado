@@ -1,78 +1,47 @@
-# Deploy Skill
+---
+name: deploy
+description: Despliegue del SaaS (admin-panel Next.js + Prisma) a Railway. Se activa con "deploy", "desplegar", "release", "publicar", "subir a producción" o menciones de Railway/variables de entorno.
+---
 
-Auto-triggered when the user asks about deploying, releasing, or publishing the application to any environment.
+# Skill: Deploy — saas-mejorado
 
-## Trigger Conditions
+El servicio desplegable es **`admin-panel/`** (Next.js 14 + Prisma). `backend/` es
+un esqueleto legado: no se despliega.
 
-This skill is loaded when the conversation contains any of:
-- "deploy", "desplegar", "release", "publish", "push to production"
-- References to Railway, Docker, or environment promotion
+## Checklist pre-deploy
+- [ ] `npx tsc --noEmit` sin errores en `admin-panel/`
+- [ ] `npx prisma validate` OK; migraciones aplicadas (`npm run db:push` o `migrate deploy`)
+- [ ] Variables de `deploy-config.md` configuradas en Railway (incluidas las del módulo shop)
+- [ ] `SHOP_JWT_SECRET`, `NEXTAUTH_SECRET` y `CIPHER_MASTER_KEY` ≠ valores de desarrollo
+- [ ] Webhooks de pago apuntando a la URL pública (ver abajo)
 
-## What This Skill Provides
+## Deploy (Railway)
+- Push a `main` → auto-deploy del servicio conectado al repo.
+- Manual: `railway up` (requiere `npm i -g @railway/cli` + `railway login`).
+- Logs: `railway logs` o dashboard.
 
-Context and step-by-step procedures for deploying SaaS Mejorado to:
-- **Local dev** via Docker Compose
-- **Staging** via Railway (branch deploys)
-- **Production** via Railway or Docker on VPS
-
-See `deploy-config.md` for environment variables, ports, and service dependencies per target.
-
-## Pre-Deploy Checklist
-
-Before any deploy, verify:
-- [ ] `npm run lint` passes with zero errors
-- [ ] `npm test` passes — no skipped tests
-- [ ] `npm run db:migrate` is current (no pending migrations)
-- [ ] `.env` variables listed in `deploy-config.md` are set in the target environment
-- [ ] `ANTHROPIC_API_KEY` is valid and has sufficient credits
-- [ ] `JWT_SECRET` is not the development default
-
-## Deploy Commands
-
-### Local (Docker Compose)
+## Primera vez / nueva tienda
 ```bash
-docker-compose up -d --build
-docker-compose logs -f backend
+cd admin-panel
+npm install
+npm run db:push            # aplica el schema (incluye modelos e-commerce)
+npx prisma generate
+npx tsx prisma/seed-shop.ts   # crea tienda demo e imprime el X-Tenant-Key
 ```
 
-### Railway (staging)
+## Webhooks de pago (config en dashboards externos)
+| Proveedor | URL a registrar | Secreto en env |
+|---|---|---|
+| Mercado Pago | `https://<dominio>/webhook/mercadopago` | `MERCADO_PAGO_WEBHOOK_SECRET` |
+| Conekta | `https://<dominio>/webhook/conekta` | `CONEKTA_WEBHOOK_SECRET` |
+
+## Verificación post-deploy
 ```bash
-# Railway CLI must be installed: npm i -g @railway/cli
-railway login
-railway up --environment staging
-railway logs
-```
-
-### Railway (production)
-```bash
-railway up --environment production
-# Monitor deploy in Railway dashboard
-```
-
-### Manual VPS (Docker)
-```bash
-npm run docker:build
-docker tag saas-mejorado registry.example.com/saas-mejorado:latest
-docker push registry.example.com/saas-mejorado:latest
-ssh user@vps "docker pull registry.example.com/saas-mejorado:latest && docker-compose up -d"
-```
-
-## Post-Deploy Verification
-
-```bash
-# Health check
-curl https://your-domain.com/api/health
-
-# Check bot webhook is registered
-curl https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getWebhookInfo
+# Catálogo de la tienda demo (sustituir tenant key del seed)
+curl -s https://<dominio>/api/shop/products -H "X-Tenant-Key: tk_..." | head -c 300
+# Panel admin responde
+curl -s -o /dev/null -w "%{http_code}\n" https://<dominio>/
 ```
 
 ## Rollback
-
-```bash
-# Railway
-railway rollback
-
-# Docker
-docker-compose down && docker pull saas-mejorado:previous && docker-compose up -d
-```
+Railway dashboard → Deployments → Redeploy del deploy anterior (o `railway down` + redeploy).

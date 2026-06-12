@@ -1,73 +1,42 @@
-# Deploy Configuration
+# Configuración de Deploy — admin-panel
 
-## Environments
+## Entornos
+| Entorno | Cómo | Notas |
+|---|---|---|
+| Local dev | `cd admin-panel && npm run dev` | Puerto 3001 (ver package.json); BD Postgres local o de Railway |
+| Producción | Railway, auto-deploy desde `main` | Postgres administrado por Railway |
 
-### Local Dev (`docker-compose`)
+## Variables de entorno requeridas
 
-| Service | Port | Notes |
-|---------|------|-------|
-| Backend API | 3000 | Express.js |
-| Frontend | 5173 | Vite dev server |
-| PostgreSQL | 5432 | `saas_mejorado_dev` database |
-| Redis | 6379 | Sessions + BullMQ |
+### Núcleo
+| Variable | Requerida | Notas |
+|---|---|---|
+| `DATABASE_URL` | Sí | PostgreSQL (Railway la inyecta) |
+| `NEXTAUTH_URL` | Sí | URL pública del panel |
+| `NEXTAUTH_SECRET` | Sí | `openssl rand -hex 32` |
 
-**Compose file**: `docker-compose.yml` at repo root.
+### Módulo e-commerce (Fase 1+)
+| Variable | Requerida | Notas |
+|---|---|---|
+| `SHOP_JWT_SECRET` | Sí | JWT de clientes finales (jose). DISTINTO de NEXTAUTH_SECRET |
 
-### Staging (Railway)
+### Pagos (Fase 3+)
+| Variable | Requerida | Notas |
+|---|---|---|
+| `CIPHER_MASTER_KEY` | Sí | 64 hex chars (32 bytes) — cifra llaves MP/Conekta en BD |
+| `MERCADO_PAGO_WEBHOOK_SECRET` | Si se usa MP | Del dashboard de MP |
+| `CONEKTA_WEBHOOK_SECRET` | Si se usa Conekta | Del dashboard de Conekta |
+| `NEXT_PUBLIC_BASE_URL` | Sí (F3) | URL pública, usada en back_urls/notification_url |
 
-- Branch: `develop` auto-deploys to staging
-- URL: `https://saas-mejorado-staging.up.railway.app`
-- Database: Railway-managed PostgreSQL (staging project)
-- Redis: Railway-managed Redis
+### Notificaciones (Fase 4, opcionales)
+| Variable | Notas |
+|---|---|
+| `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` / `TWILIO_WHATSAPP_NUMBER` | WhatsApp al dueño |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_ADMIN_CHAT_ID` | Telegram al dueño |
 
-### Production (Railway)
+## Arranque
+1. PostgreSQL accesible → 2. `prisma migrate deploy`/`db:push` → 3. `next start`.
 
-- Branch: `main` auto-deploys to production
-- URL: configured in Railway domain settings
-- Database: Railway-managed PostgreSQL (production project)
-- Redis: Railway-managed Redis
-
-## Required Environment Variables
-
-| Variable | Required | Example |
-|----------|----------|---------|
-| `NODE_ENV` | Yes | `production` |
-| `PORT` | Yes | `3000` |
-| `DATABASE_URL` | Yes | `postgresql://...` |
-| `REDIS_URL` | Yes | `redis://...` |
-| `JWT_SECRET` | Yes | 256-bit random string |
-| `JWT_REFRESH_SECRET` | Yes | 256-bit random string |
-| `ANTHROPIC_API_KEY` | Yes | `sk-ant-...` |
-| `TELEGRAM_BOT_TOKEN` | Yes | From BotFather |
-| `TELEGRAM_WEBHOOK_URL` | Yes | `https://your-domain.com/webhook/telegram` |
-| `TELEGRAM_SECRET_TOKEN` | Yes | Random token for webhook verification |
-| `WHATSAPP_EVOLUTION_URL` | Yes (if WhatsApp enabled) | Evolution API URL |
-| `WHATSAPP_API_KEY` | Yes (if WhatsApp enabled) | Evolution API key |
-| `BITRIX24_WEBHOOK_URL` | No | For CRM sync |
-| `CORS_ORIGIN` | Yes | Frontend domain |
-| `RATE_LIMIT_WINDOW_MS` | No | `60000` |
-| `RATE_LIMIT_MAX` | No | `500` |
-
-## Service Startup Order
-
-1. PostgreSQL (must be accepting connections)
-2. Redis (must be ready)
-3. Backend API (runs `prisma migrate deploy` on boot)
-4. Frontend (static build or Vite)
-5. Telegram bot (Python process — separate dyno/worker)
-
-## Health Endpoints
-
-| Endpoint | Expected response |
-|----------|------------------|
-| `GET /api/health` | `{ "status": "ok", "db": "connected", "redis": "connected" }` |
-| `GET /api/health/bot` | `{ "telegram": "active", "whatsapp": "active" }` |
-
-## Resource Sizing (Production)
-
-| Service | Min RAM | Min CPU |
-|---------|---------|---------|
-| Backend API | 512 MB | 0.5 vCPU |
-| PostgreSQL | 1 GB | 1 vCPU |
-| Redis | 256 MB | 0.25 vCPU |
-| Telegram Bot | 256 MB | 0.25 vCPU |
+## Salud
+- `GET /api/shop/products` con un `X-Tenant-Key` válido responde 200 con JSON.
+- La home del panel responde 200.

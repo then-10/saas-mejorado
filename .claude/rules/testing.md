@@ -1,56 +1,34 @@
-# Testing Rules
+# Validación y Testing — saas-mejorado
 
-## Framework
+## Estado actual (honesto)
+El proyecto AÚN NO tiene suite de tests configurada. Hasta que exista, toda
+contribución al módulo e-commerce se valida con:
 
-Jest with `ts-jest` for TypeScript transpilation. Config lives in `jest.config.ts`.
+```bash
+cd admin-panel
+npx tsc --noEmit                      # 0 errores en los archivos tocados
+node -e "require('@prisma/internals')" 2>/dev/null && \
+  npx tsx -e "import {getDMMF} from '@prisma/internals'; ..." # schema válido (ver historial F1)
+npx prisma validate                   # alternativa simple para el schema
+```
 
-## File Naming
+Y con pruebas manuales vía curl contra `npm run dev` (ver `.claude/skills/ecommerce-api/SKILL.md`).
 
-- Unit tests: `*.test.ts` alongside the source file.
-- Integration tests: `*.integration.test.ts` in `backend/__tests__/`.
-- E2E tests: `*.e2e.test.ts` in `tests/e2e/`.
+## Cuando se agregue la suite (objetivo)
+- Framework sugerido: Vitest (mejor DX con Next.js/TS que Jest).
+- Unit: `*.test.ts` junto al archivo. Integración: `admin-panel/__tests__/`.
 
-## What to Test
+### Prioridades de cobertura
+1. Aislamiento multi-tenant: una petición con `X-Tenant-Key` de la tienda A jamás
+   devuelve/escribe datos de la tienda B.
+2. Creación de pedido: precios server-side, stock condicional (409 al agotarse),
+   transacción completa o nada.
+3. Webhooks: firma inválida → no toca BD; evento duplicado → idempotente.
+4. Auth: token expirado/forjado → 401; cliente de otra tienda → 404.
 
-### Must test
-- All service layer functions (business logic).
-- JWT middleware (valid token, expired token, missing token, wrong tenant).
-- Lead qualification pipeline (AI response parsing + DB state changes).
-- Multi-tenancy isolation — a request scoped to tenant A must never return tenant B data.
+### Mocking
+- Mockear: fetch a Mercado Pago/Conekta, envío de notificaciones.
+- NO mockear Prisma en integración: usar PostgreSQL de prueba (`*_test`).
 
-### Do not test
-- Prisma model internals (tested by the ORM itself).
-- Express route wiring (covered by integration tests).
-- Third-party API responses (mock at the client boundary).
-
-## Mocking Policy
-
-- **Mock** external APIs: Anthropic Claude, Telegram, WhatsApp Evolution API, Bitrix24.
-- **Do not mock** the database in integration tests — use a real test PostgreSQL instance with a `_test` suffix database.
-- Use `jest.spyOn` for mocking service dependencies in unit tests.
-
-## Multi-Tenancy in Tests
-
-Every integration test that touches the database must:
-1. Create a test `saas_client` record in `beforeAll`.
-2. Scope all fixtures to that client ID.
-3. Clean up in `afterAll` using a transaction rollback or `prisma.$executeRaw('TRUNCATE ...')`.
-
-## Coverage Targets
-
-| Area | Minimum |
-|------|---------|
-| Services | 80% |
-| Middleware | 90% |
-| Utils | 70% |
-| Routes (integration) | 70% |
-
-Run `npm test -- --coverage` to check.
-
-## Claude API Tests
-
-Tests that exercise Claude AI must mock `anthropic.messages.create`. Use the fixture in `tests/fixtures/claude-response.json` for consistent snapshots.
-
-## Applies to
-
-`backend/**/*.test.ts`, `backend/__tests__/**`, `tests/**`
+## Aplica a
+`admin-panel/**`

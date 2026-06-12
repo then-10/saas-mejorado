@@ -1,54 +1,37 @@
-# Code Style Rules
+# Estilo de Código — saas-mejorado (admin-panel)
 
 ## TypeScript
+- Modo estricto; sin `any` implícito. `any` explícito solo con comentario.
+- `const` por defecto; `interface` para objetos, `type` para uniones.
+- Promesas siempre `await`-eadas; sin floating promises.
+- Errores: capturar, responder `NextResponse.json({ error }, { status })` — nunca filtrar stack traces.
 
-- Strict mode enabled — no implicit `any`.
-- Prefer `interface` over `type` for object shapes; use `type` for unions and primitives.
-- Use `const` by default; `let` only when mutation is necessary.
-- Async functions must return typed promises: `Promise<Lead>` not `Promise<any>`.
-- Never use `!` non-null assertion without a comment explaining why it's safe.
+## Nombres
+- Archivos de rutas: convención App Router (`route.ts` dentro de carpetas kebab-case o `[param]`).
+- Librerías compartidas: `admin-panel/src/lib/shop/*.ts` en kebab-case.
+- Variables/funciones `camelCase`; tipos `PascalCase`; constantes módulo `UPPER_SNAKE_CASE`.
 
-## Naming
-
-- Files: `kebab-case.ts` for modules, `PascalCase.ts` for React components.
-- Variables/functions: `camelCase`.
-- Types/interfaces/classes: `PascalCase`.
-- Constants: `UPPER_SNAKE_CASE` for module-level config only.
-- Database columns: `snake_case` (Prisma maps to camelCase in code).
-
-## Multi-Tenancy Guard
-
-Every service method that queries the database must accept `saasClientId` as a parameter and include it in every `WHERE` clause. No exceptions.
-
+## Guardia multi-tenant (sin excepciones)
+Todo acceso a datos del módulo shop deriva el tenant del request, nunca lo recibe:
 ```ts
-// Correct
-async getLeads(saasClientId: string, filters: LeadFilters) {
-  return prisma.salesLead.findMany({ where: { saasClientId, ...filters } });
-}
+// ✅ Correcto
+const store = await resolveStore(req);
+if (!store) return unauthorizedTenant();
+const products = await prisma.product.findMany({ where: { storeId: store.id } });
 
-// Wrong — missing tenant scope
-async getLeads(filters: LeadFilters) {
-  return prisma.salesLead.findMany({ where: filters });
-}
+// ❌ Incorrecto — tenant del cliente
+const { storeId } = await req.json();
+const products = await prisma.product.findMany({ where: { storeId } });
 ```
 
-## Error Handling
+## Prisma
+- Multi-tabla → `prisma.$transaction`.
+- `Decimal` nunca llega crudo al JSON: pasar por `serialize.ts`.
+- Campos sensibles (`passwordHash`, `apiKey`, `*Enc`) excluidos con `select` en respuestas.
 
-- Use typed error classes (`AppError`, `AuthError`, `NotFoundError`) in `backend/errors/`.
-- Express routes must pass errors to `next(err)` — never swallow with empty catch.
-- Claude API errors: retry once with exponential backoff; log the attempt.
+## Secretos
+- Solo por `process.env`; documentados en `.env.example` sin valores reales.
+- `SHOP_JWT_SECRET` ≠ `NEXTAUTH_SECRET`. Llaves de pago cifradas con `CIPHER_MASTER_KEY`.
 
-## Imports
-
-- Use path aliases (`@/services/lead`) configured in `tsconfig.json` — no `../../..` relative paths.
-- Group imports: Node built-ins → third-party → internal aliases → relative.
-
-## Formatting
-
-- Prettier with default settings; enforced via `npm run lint`.
-- Max line length: 100 characters.
-- Trailing commas in multi-line structures.
-
-## Applies to
-
-`backend/**/*.ts`, `frontend/**/*.ts`, `frontend/**/*.tsx`
+## Aplica a
+`admin-panel/src/**/*.ts`, `admin-panel/src/**/*.tsx`, `admin-panel/prisma/**`

@@ -1,57 +1,25 @@
-# /project:fix-issue — Fix a GitHub Issue
+# /project:fix-issue — Arreglar un issue de GitHub
 
-Investigate, implement, and verify a fix for a reported bug or feature request.
-
-## Usage
-
+## Uso
 ```
-/project:fix-issue <issue-number>
-/project:fix-issue 42
+/project:fix-issue <número>
 ```
 
-## Workflow
+## Flujo
+1. **Leer**: `gh issue view $ARGUMENTS` → título, repro, esperado vs actual.
+2. **Reproducir**: `cd admin-panel && npm run dev` (puerto 3001) y disparar el caso
+   con curl (headers `X-Tenant-Key` / `Authorization` según la superficie).
+3. **Causa raíz**: trazar route handler → lib (`tenant`, `customer-auth`, `payments`) → Prisma.
+   Revisar historial: `git log --oneline -10 -- <archivo>`.
+4. **Fix**: solo los archivos necesarios; seguir `.claude/rules/*`.
+5. **Verificar**: `npx tsc --noEmit` + curl del caso reproducido.
+6. **PR**: rama `fix/issue-$ARGUMENTS`, commit `fix: <desc> (closes #$ARGUMENTS)`.
 
-### Step 1 — Read the issue
-```bash
-gh issue view $ARGUMENTS
-```
-Parse: title, description, steps to reproduce, expected vs actual behavior.
-
-### Step 2 — Reproduce locally
-- Identify the affected endpoint or bot command from the issue description.
-- Run the backend in dev mode: `npm run dev`.
-- Trigger the failing scenario and confirm the error.
-
-### Step 3 — Root cause analysis
-- Trace the request: route → middleware → service → DB.
-- Check for missing tenant scope, unhandled async errors, or Claude API failures.
-- Check recent git history for the affected file: `git log --oneline -10 -- <file>`.
-
-### Step 4 — Implement fix
-- Edit only the files required — no scope creep.
-- Follow `.claude/rules/code-style.md` and `.claude/rules/api-conventions.md`.
-- If the bug involves a missing test, add the test first (TDD).
-
-### Step 5 — Verify
-```bash
-npm run lint:fix
-npm test -- --testPathPattern="<affected-service>"
-```
-
-### Step 6 — Create PR
-```bash
-git checkout -b fix/issue-$ARGUMENTS
-git add <changed-files>
-git commit -m "fix: <short description> (closes #$ARGUMENTS)"
-gh pr create --title "fix: <description>" --body "Closes #$ARGUMENTS"
-```
-
-## Common Fix Patterns
-
-| Symptom | Likely cause | Fix location |
-|---------|-------------|--------------|
-| Data leaking across tenants | Missing `saasClientId` filter | `backend/services/*.ts` |
-| 401 on valid token | JWT middleware not applied to new route | `backend/routes/*.ts` |
-| Bot not responding | Unhandled Claude API error | `bots/telegram/bot_improved.py` |
-| Webhook returns 500 | Async handler throwing without `next(err)` | `backend/routes/webhooks.ts` |
-| Pipeline stage not updating | Socket.io room not scoped to tenant | `backend/socket/handlers.ts` |
+## Patrones comunes
+| Síntoma | Causa probable | Dónde |
+|---|---|---|
+| Datos de otra tienda | Falta filtro `storeId` de `resolveStore` | `src/app/api/shop/**` |
+| 401 con token válido | Secret equivocado (SHOP vs NEXTAUTH) | `src/lib/shop/customer-auth.ts` |
+| Doble cobro | Webhook sin idempotencia | `src/app/webhook/**` |
+| Sobreventa | Decremento sin condición de stock | `api/shop/orders/route.ts` |
+| JSON con strings raros en precios | `Decimal` sin serializar | `src/lib/shop/serialize.ts` |

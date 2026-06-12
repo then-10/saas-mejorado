@@ -1,83 +1,49 @@
-# API Conventions
+# Convenciones de API — saas-mejorado (admin-panel)
 
-## URL Design
+El código funcional vive en `admin-panel/` (Next.js 14 App Router). Las rutas son
+route handlers en `admin-panel/src/app/api/**/route.ts` — NO Express, NO `/api/v1`.
 
-- Base path: `/api/v1/` (version in URL, not header).
-- Resources in plural kebab-case: `/api/v1/sales-leads`, `/api/v1/pipeline-stages`.
-- Actions that don't map to CRUD: POST to sub-resource verb, e.g. `POST /api/v1/leads/:id/qualify`.
-- Webhook endpoints live outside `/api/`: `/webhook/telegram`, `/webhook/whatsapp`.
+## Dos superficies de API
 
-## HTTP Methods
+| Superficie | Prefijo | Auth | Consumidor |
+|---|---|---|---|
+| Tienda (cliente final) | `/api/shop/*` | Header `X-Tenant-Key` + `Authorization: Bearer <JWT jose>` donde aplique | App Android TiendaRopa |
+| Admin (dueño/panel) | `/api/admin/shop/*` | Sesión NextAuth (`getServerSession`) | Dashboard web |
+| Webhooks de pago | `/webhook/mercadopago`, `/webhook/conekta` | Firma criptográfica (sin sesión) | Proveedores |
 
-| Operation | Method | Example |
-|-----------|--------|---------|
-| List | GET | `GET /api/v1/leads` |
-| Create | POST | `POST /api/v1/leads` |
-| Read | GET | `GET /api/v1/leads/:id` |
-| Full update | PUT | `PUT /api/v1/leads/:id` |
-| Partial update | PATCH | `PATCH /api/v1/leads/:id` |
-| Delete (soft) | DELETE | `DELETE /api/v1/leads/:id` |
+## Resolución de tenant
+- Toda ruta `/api/shop/*` inicia con `resolveStore(req)` (lee `X-Tenant-Key`).
+- Si no resuelve → `unauthorizedTenant()` (401). Cliente `SUSPENDIDO` → rechazado.
+- `storeId` y `customerId` NUNCA se aceptan desde params/body del cliente.
 
-## Request Format
-
-- `Content-Type: application/json` required on all POST/PUT/PATCH.
-- All list endpoints accept: `?page=1&limit=20&sort=createdAt&order=desc`.
-- Filters as query params: `?status=qualified&assignedTo=userId`.
-
-## Response Format
-
+## Formato de respuesta
+Objetos JSON planos por recurso (sin envelope `{success,data}`):
 ```json
-{
-  "success": true,
-  "data": { ... },
-  "meta": { "page": 1, "limit": 20, "total": 150 }
-}
+{ "products": [...], "serverTime": "2026-06-10T00:00:00Z" }
+{ "order": { ... } }
+{ "error": "Mensaje legible" }   // siempre acompañado del status HTTP correcto
 ```
+- `Prisma.Decimal` → `Number` vía `src/lib/shop/serialize.ts` antes de responder.
+- Sync incremental: listados aceptan `?updatedAfter=ISO8601` y devuelven `serverTime`.
 
-Errors:
-```json
-{
-  "success": false,
-  "error": {
-    "code": "LEAD_NOT_FOUND",
-    "message": "Lead 123 not found",
-    "details": {}
-  }
-}
-```
+## Códigos de estado
+| Situación | Código |
+|---|---|
+| Lectura/actualización OK | 200 |
+| Creación | 201 |
+| Body inválido | 400 |
+| Tenant o token inválido | 401 |
+| Recurso de otro tenant / rol incorrecto | 404 (no revelar existencia) |
+| Stock insuficiente / conflicto | 409 |
+| Estado no permite la operación | 422 |
+| Error del proveedor de pagos | 502 |
 
-## HTTP Status Codes
+## Reglas de dominio
+- Precios y totales SIEMPRE calculados en servidor.
+- Stock: `updateMany WHERE stock >= quantity` dentro de `$transaction`.
+- Productos: soft delete (`isActive=false`).
+- Estados de pedido: transiciones validadas contra el mapa `TRANSITIONS`.
+- Webhooks: verificar firma → procesar idempotente (por `externalId`) → responder 200.
 
-| Situation | Code |
-|-----------|------|
-| Success (read/update) | 200 |
-| Created | 201 |
-| No content (delete) | 204 |
-| Bad request / validation | 400 |
-| Unauthenticated | 401 |
-| Unauthorized (wrong tenant/role) | 403 |
-| Not found | 404 |
-| Conflict (duplicate) | 409 |
-| Server error | 500 |
-
-## Authentication
-
-- All `/api/v1/*` routes require `Authorization: Bearer <jwt>`.
-- JWT payload must include `{ userId, saasClientId, role }`.
-- Token lifetime: 15 min access + 7 day refresh. Rotate refresh token on use.
-
-## Rate Limiting
-
-- Default: 100 req/min per IP.
-- Authenticated routes: 500 req/min per `saasClientId`.
-- Webhook endpoints: unlimited (protected by signature verification instead).
-
-## Webhooks
-
-- Verify Telegram signature via `X-Telegram-Bot-Api-Secret-Token`.
-- Verify WhatsApp signature via `X-Hub-Signature-256`.
-- Return `200 OK` immediately; process async via BullMQ.
-
-## Applies to
-
-`backend/routes/**/*.ts`, `backend/middleware/**/*.ts`
+## Aplica a
+`admin-panel/src/app/api/**/route.ts`, `admin-panel/src/lib/shop/**`

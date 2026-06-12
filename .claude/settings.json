@@ -19,7 +19,10 @@
       "Bash(ls *)",
       "Bash(cat *)",
       "Bash(find *)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(tsx *)",
+      "Bash(gh pr *)",
+      "Bash(gh issue *)"
     ],
     "deny": [
       "Bash(rm -rf /)",
