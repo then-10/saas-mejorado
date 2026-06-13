@@ -25,6 +25,7 @@
 | F4 parcial — GET /api/shop/me, GET /api/shop/layaways, serializeLayaway | `fd87bac` |
 | F4 backend completa — `applyPaidPayment` idempotente y consciente de LAYAWAY (compartido por webhooks y polling), `POST /api/shop/layaways/[id]/payments` (abono cliente vía MP/Conekta), anticipo cobrado correctamente en pedidos LAYAWAY, `/api/cron/expire-layaways` protegido por `CRON_SECRET` (expira + devuelve stock, anticipo retenido) | `58b9e6f` |
 | F4 Android — auth (TokenStorage cifrado + AuthInterceptor), pedidos remotos (ShopOrderRepository + CheckoutViewModel reescrito con orderType PURCHASE/LAYAWAY + gate de sesión), pantallas Login/Register/Profile/Orders/Layaways/LayawayPayment, BottomBar a 4 tabs, security-crypto en gradle | repo android `f6881ee` |
+| Fix deploy Railway — `"builder": ""` inválido en railway.json (raíz y admin-panel/) + campo `productName` no existe en OrderItem (es `name`) en layaways/route.ts y serialize.ts. Retrocompatible con la app (DTO ya tenía fallback productName→name) | (commit del fix) |
 | F5+ — Editor de productos (ProductForm + páginas nuevo/editar), página de Ventas con Recharts (LineChart ingresos, PieChart métodos, BarChart top productos), configuración de tienda (NUEVO endpoint PUT /api/admin/shop/stores/[id] con encryptField para llaves de pago); overview con tiles de Ventas y Configuración | `8a6b961` |
 | F5 SaaS — dashboard admin web del módulo shop: /admin/tiendas (selector con KPIs), /admin/tiendas/[storeId] (overview con ingresos 30d), pedidos con filtros y acciones (cambio de estado respetando TRANSITIONS, pago/abono en efectivo), apartados con progreso (vencidos/próximos a vencer resaltados), productos con toggle de activación. Sidebar + link 'Tiendas'. | `206a43d` |
 | F5 Android — productFlavors dimensión 'tienda' (generic + demo) con SHOP_BASE_URL/SHOP_TENANT_KEY/app_name por flavor; docs/FASE5_WHITELABEL.md con receta de 4 pasos para agregar una tienda | repo android `d867c8b` |
@@ -68,6 +69,8 @@
 7. El entorno NO tiene Android SDK ni acceso a binarios de Prisma engines (usar getDMMF WASM). `gradlew` solo corre en la máquina del usuario.
 8. Repos: `then-10/saas-mejorado` (este) y `then-10/tiendaropa-android`. Una sola rama: `main`. El usuario autoriza commit+push directo a main.
 
+9. **Verificar el SCHEMA REAL antes de hacer `select` Prisma.** En la sesión perdida se escribió `productName: true` en un select de `OrderItem`, pero el campo se llama `name`. TypeScript no lo atrapa hasta el build de producción → fallo en Railway. Si dudas, `grep -A20 "^model OrderItem" admin-panel/prisma/schema.prisma`.
+10. **Railway no acepta `"builder": ""` (string vacío).** Si no sabes qué builder usar, **omite el campo entero**; Railway autodetecta Nixpacks por la presencia de `package.json`.
 ## 🔍 Comandos de auditoría al iniciar sesión
 ```bash
 cd /home/claude/saas-mejorado 2>/dev/null || git clone https://github.com/then-10/saas-mejorado.git
