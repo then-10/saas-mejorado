@@ -69,7 +69,7 @@
 7. El entorno NO tiene Android SDK ni acceso a binarios de Prisma engines (usar getDMMF WASM). `gradlew` solo corre en la máquina del usuario.
 8. Repos: `then-10/saas-mejorado` (este) y `then-10/tiendaropa-android`. Una sola rama: `main`. El usuario autoriza commit+push directo a main.
 
-9. **Verificar el SCHEMA REAL antes de hacer `select` Prisma.** En la sesión perdida se escribió `productName: true` en un select de `OrderItem`, pero el campo se llama `name`. TypeScript no lo atrapa hasta el build de producción → fallo en Railway. Si dudas, `grep -A20 "^model OrderItem" admin-panel/prisma/schema.prisma`.
+9. **Verificar el SCHEMA REAL antes de hacer `select` Prisma.** Casos repetidos de la sesión perdida: `OrderItem.productName` (es `name`) en `layaways/route.ts`, `Customer.firstName/lastName` (es solo `name`) en `me/route.ts`. TypeScript local no los atrapa por inferencia diferida; **el build de producción de Next.js sí**, y aborta el deploy en Railway. Antes de cualquier `select`: `grep -A20 "^model <Nombre>" admin-panel/prisma/schema.prisma`.
 10. **Railway no acepta `"builder": ""` (string vacío).** Si no sabes qué builder usar, **omite el campo entero**; Railway autodetecta Nixpacks por la presencia de `package.json`.
 ## 🔍 Comandos de auditoría al iniciar sesión
 ```bash
