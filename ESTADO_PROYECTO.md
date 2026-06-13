@@ -13,7 +13,7 @@
 
 ## 📍 Estado actual
 - **Fecha:** 2026-06-12 · **Rama única:** `main`
-- **Último hito:** Fase 5 ENTREGADA — dashboard admin web del módulo shop (tiendas con KPIs, pedidos con filtros y acciones, apartados con progreso, productos con toggle de activación) + white-label Android con productFlavors.
+- **Último hito:** F5 extras ENTREGADOS — editor completo de productos (crear/editar/desactivar), página de Ventas con Recharts (ingresos por día, métodos de pago, top productos), configuración editable de tienda (con llaves de pago cifradas AES-256-GCM al guardar).
   saneada, schema deduplicado y validado, ramas eliminadas (solo existe main).
 
 ## ✅ Hecho y verificado (evidencia = commit en main)
@@ -25,19 +25,13 @@
 | F4 parcial — GET /api/shop/me, GET /api/shop/layaways, serializeLayaway | `fd87bac` |
 | F4 backend completa — `applyPaidPayment` idempotente y consciente de LAYAWAY (compartido por webhooks y polling), `POST /api/shop/layaways/[id]/payments` (abono cliente vía MP/Conekta), anticipo cobrado correctamente en pedidos LAYAWAY, `/api/cron/expire-layaways` protegido por `CRON_SECRET` (expira + devuelve stock, anticipo retenido) | `58b9e6f` |
 | F4 Android — auth (TokenStorage cifrado + AuthInterceptor), pedidos remotos (ShopOrderRepository + CheckoutViewModel reescrito con orderType PURCHASE/LAYAWAY + gate de sesión), pantallas Login/Register/Profile/Orders/Layaways/LayawayPayment, BottomBar a 4 tabs, security-crypto en gradle | repo android `f6881ee` |
+| F5+ — Editor de productos (ProductForm + páginas nuevo/editar), página de Ventas con Recharts (LineChart ingresos, PieChart métodos, BarChart top productos), configuración de tienda (NUEVO endpoint PUT /api/admin/shop/stores/[id] con encryptField para llaves de pago); overview con tiles de Ventas y Configuración | `8a6b961` |
 | F5 SaaS — dashboard admin web del módulo shop: /admin/tiendas (selector con KPIs), /admin/tiendas/[storeId] (overview con ingresos 30d), pedidos con filtros y acciones (cambio de estado respetando TRANSITIONS, pago/abono en efectivo), apartados con progreso (vencidos/próximos a vencer resaltados), productos con toggle de activación. Sidebar + link 'Tiendas'. | `206a43d` |
 | F5 Android — productFlavors dimensión 'tienda' (generic + demo) con SHOP_BASE_URL/SHOP_TENANT_KEY/app_name por flavor; docs/FASE5_WHITELABEL.md con receta de 4 pasos para agregar una tienda | repo android `d867c8b` |
 | `.claude/` alineado a la arquitectura real + skill ecommerce-api | `783a3b8`, `0a48d66` |
 | App Android (repo `tiendaropa-android`): F2 catálogo sync + detalle, F3 checkout/pagos, navegación dual | su main `c02b3b9` |
 
 ## 🚧 NO hecho todavía (no asumir lo contrario)
-- **Editor de producto** en el panel (crear/editar imagen/precio/stock/tallas). El
-  toggle de activación ya está; falta el formulario completo (PUT/POST a
-  /api/admin/shop/products existentes).
-- **Página de Ventas** con gráficas Recharts (revenue por día, por método). Los
-  KPIs ya están en overview; falta el chart histórico.
-- **Configuración editable de la tienda** (depositPct, days, switching de
-  proveedor) desde el panel.
 - Deploy real en Railway con env vars (CIPHER_MASTER_KEY, SHOP_JWT_SECRET,
   CRON_SECRET, MP/CONEKTA_WEBHOOK_SECRET) + registrar webhooks en MP/Conekta +
   configurar cron hacia `/api/cron/expire-layaways` con `x-cron-secret`.
@@ -46,17 +40,23 @@
 - Tests automatizados (no existe suite; ver `.claude/rules/testing.md`)
 
 ## ▶️ SIGUIENTE PASO EXACTO
-1. **Compilar y probar la app demo** en la máquina del usuario:
-   `./gradlew assembleDemoDebug -PdemoSHOP_BASE_URL=https://<saas>.railway.app/ -PdemoSHOP_TENANT_KEY=tk_...`.
-   Confirmar que el `app_name` es "TiendaRopa Demo" y el applicationId termina en `.demo`.
-2. **Deploy del SaaS en Railway** con todas las env vars de F3/F4
-   (`.claude/skills/deploy/deploy-config.md`). Registrar webhooks MP/Conekta y un
-   scheduler horario hacia `/api/cron/expire-layaways` con `x-cron-secret`.
-3. **Recorrer el panel /admin/tiendas en producción** — crear pedidos de prueba
-   desde la app, cambiar su estado, registrar abonos en efectivo y verificar que
-   el apartado avanza correctamente y se completa al cubrir el total.
-4. **F5 extras (orden de prioridad):** formulario completo de producto en el
-   panel · página de Ventas con Recharts · edición de configuración de tienda.
+1. **Deploy del SaaS en Railway** con env vars de F3/F4 (CIPHER_MASTER_KEY,
+   SHOP_JWT_SECRET, CRON_SECRET, MP/CONEKTA_WEBHOOK_SECRET). Registrar webhooks
+   en MP/Conekta. Configurar scheduler horario hacia `/api/cron/expire-layaways`
+   con `x-cron-secret`. Ver `.claude/skills/deploy/deploy-config.md`.
+2. **Validar builds Android por flavor** en la máquina del usuario
+   (`./gradlew assembleGenericDebug` y `./gradlew assembleDemoDebug
+   -PdemoSHOP_BASE_URL=... -PdemoSHOP_TENANT_KEY=tk_...`).
+3. **Pruebas end-to-end** en producción:
+   - Crear producto desde /admin/tiendas/[id]/productos/nuevo y verificar que
+     la app lo sincroniza en el siguiente tick (sync incremental por updatedAt).
+   - Configurar llaves de pago en /admin/tiendas/[id]/configuracion (entrar
+     APP_USR-... o key_...) → crear pedido + pagarlo → confirmar que la página
+     /admin/tiendas/[id]/ventas grafica el ingreso.
+   - Crear apartado → abonar → verificar que la barra de progreso en
+     /admin/tiendas/[id]/apartados avanza.
+4. Cuando algo falle, usar el agente debugger (causa raíz primero); cuando se
+   abra sesión nueva, leer este archivo + auditar git ANTES de codear.
 
 ## ⚠️ GOTCHAS — errores REALES ya cometidos; no repetir
 1. **Rutas absolutas SIEMPRE** en herramientas (`/home/claude/...`). Las relativas crearon basura en `/admin-panel` y `/app`.
