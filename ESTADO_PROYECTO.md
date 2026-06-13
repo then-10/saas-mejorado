@@ -13,7 +13,7 @@
 
 ## 📍 Estado actual
 - **Fecha:** 2026-06-12 · **Rama única:** `main`
-- **Último hito:** Consolidación total — F3 backend commiteada de verdad, F4 parcial
+- **Último hito:** Fase 4 ENTREGADA — backend (apartados con abonos vía proveedor, webhooks/polling idempotentes conscientes de LAYAWAY, expiración por cron) y app Android (auth, pedidos remotos, apartados con abonos).
   saneada, schema deduplicado y validado, ramas eliminadas (solo existe main).
 
 ## ✅ Hecho y verificado (evidencia = commit en main)
@@ -23,23 +23,36 @@
 | Fix schema duplicado (¡F1 lo commiteó doble!) validado con getDMMF | `3d2b528` |
 | F3 — Pagos backend: adapters MP/Conekta, encryption AES-256-GCM, endpoint crear/verificar pago, webhooks con firma+idempotencia, notificación al dueño (Telegram/WhatsApp por fetch) | `835eb5c` |
 | F4 parcial — GET /api/shop/me, GET /api/shop/layaways, serializeLayaway | `fd87bac` |
+| F4 backend completa — `applyPaidPayment` idempotente y consciente de LAYAWAY (compartido por webhooks y polling), `POST /api/shop/layaways/[id]/payments` (abono cliente vía MP/Conekta), anticipo cobrado correctamente en pedidos LAYAWAY, `/api/cron/expire-layaways` protegido por `CRON_SECRET` (expira + devuelve stock, anticipo retenido) | `58b9e6f` |
+| F4 Android — auth (TokenStorage cifrado + AuthInterceptor), pedidos remotos (ShopOrderRepository + CheckoutViewModel reescrito con orderType PURCHASE/LAYAWAY + gate de sesión), pantallas Login/Register/Profile/Orders/Layaways/LayawayPayment, BottomBar a 4 tabs, security-crypto en gradle | repo android `f6881ee` |
 | `.claude/` alineado a la arquitectura real + skill ecommerce-api | `783a3b8`, `0a48d66` |
 | App Android (repo `tiendaropa-android`): F2 catálogo sync + detalle, F3 checkout/pagos, navegación dual | su main `c02b3b9` |
 
 ## 🚧 NO hecho todavía (no asumir lo contrario)
-- F4: abonos del cliente a apartados vía MP/Conekta · job/cron de expiración de
-  apartados (status→EXPIRED) · endpoints admin de apartados · pantallas Android F4
-  (login/registro, OrdersScreen, ProfileScreen, LayawayScreen)
-- F5: white-label (flavors), dashboard admin web del módulo shop
-- Deploy real en Railway con env vars de F3/F4 · typecheck completo con deps instaladas
-- Tests automatizados (no existe suite)
+- F4 admin: endpoints/vistas admin específicas de apartados (la app del dueño aún
+  no tiene UI dedicada; los abonos en efectivo ya se registran por el endpoint
+  `/api/admin/shop/orders/[id]/payments/cash` existente, consciente de layaway)
+- F5: white-label por tienda (flavors Android), dashboard admin web del módulo shop
+- Deploy real en Railway con env vars de F3/F4 (CIPHER_MASTER_KEY, SHOP_JWT_SECRET,
+  CRON_SECRET, MP/CONEKTA_WEBHOOK_SECRET) + registrar webhooks en MP/Conekta +
+  configurar cron de Railway hacia `/api/cron/expire-layaways` con `x-cron-secret`
+- Compilar APK en máquina del usuario (`./gradlew assembleDebug`) — el entorno
+  cloud no tiene Android SDK
+- Tests automatizados (no existe suite; ver `.claude/rules/testing.md`)
 
 ## ▶️ SIGUIENTE PASO EXACTO
-1. **Android F4**: login/registro contra `/api/shop/auth/*` (guardar JWT en
-   EncryptedSharedPreferences) → `me` en ProfileScreen → OrdersScreen →
-   LayawaysScreen (consume `GET /api/shop/layaways`).
-2. Backend F4 restante: `POST /api/shop/layaways/[id]/payments` (vía provider) y
-   expiración de apartados (cron de Railway o ruta protegida + scheduler externo).
+1. **Compilar la app en la máquina del usuario**: `./gradlew assembleDebug` (el
+   entorno cloud no tiene Android SDK). Ajustar `local.properties` con
+   `SHOP_BASE_URL`, `SHOP_TENANT_KEY` y `STORE_OWNER_MODE=false`.
+2. **Deploy del SaaS en Railway** con las env vars de la tabla
+   `.claude/skills/deploy/deploy-config.md`. Registrar webhooks de MP/Conekta y
+   un scheduler que pegue cada hora a `/api/cron/expire-layaways` con header
+   `x-cron-secret`.
+3. **Prueba end-to-end** del flujo de apartado: app crea pedido LAYAWAY → paga
+   anticipo (CARD/SPEI/OXXO) → abona dos veces → al cubrir el total el pedido
+   queda PAID. Verificar idempotencia: pulsar el polling y el webhook a la vez
+   no debe duplicar paidAmount (claim atómico en `applyPaidPayment`).
+4. **F5**: white-label (flavors por tienda) + vistas admin de apartados.
 
 ## ⚠️ GOTCHAS — errores REALES ya cometidos; no repetir
 1. **Rutas absolutas SIEMPRE** en herramientas (`/home/claude/...`). Las relativas crearon basura en `/admin-panel` y `/app`.
