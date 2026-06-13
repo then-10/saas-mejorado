@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const customer = await prisma.customer.findFirst({
     where: { id: token.customerId, storeId: store.id },
-    select: { id: true, email: true, firstName: true, lastName: true, phone: true, createdAt: true },
+    select: { id: true, email: true, name: true, phone: true, createdAt: true },
   });
   if (!customer) return unauthorizedCustomer();
 
