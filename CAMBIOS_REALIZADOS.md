@@ -237,3 +237,56 @@ python -c "from anthropic import Anthropic; Anthropic().messages.create(model='c
 **Versión: 1.1.0**
 **Fecha: 2025-05-25**
 
+
+
+---
+---
+
+# 🛍️ Módulo E-commerce (Fases 1-5)
+
+## Fecha: 2026-06-13 · Estado: ENTREGADO en `main`
+
+Módulo agregado sobre el SaaS existente para que cada cliente (tienda) tenga
+su propia app Android (`then-10/tiendaropa-android`) con catálogo, pedidos,
+pagos y apartados, administrada desde el panel web del super-admin.
+
+Documento maestro: **[`docs/MODULO_ECOMMERCE.md`](./docs/MODULO_ECOMMERCE.md)**.
+
+## Fase 1 — Núcleo del módulo (`f74810f`, `3d2b528`)
+- Modelos Prisma: `Store`, `Product`, `Customer`, `Order`, `OrderItem`,
+  `Payment`, `Layaway`.
+- API pública `/api/shop/*` (cliente final, `X-Tenant-Key` + JWT).
+- API admin `/api/admin/shop/*` (super-admin, sesión NextAuth).
+- `seed-shop.ts` para crear tienda demo con 8 productos.
+
+## Fase 3 — Pagos (`835eb5c`)
+- Adapters de Mercado Pago y Conekta, contrato común en `PaymentProvider.ts`.
+- Cifrado AES-256-GCM de llaves de pago con `CIPHER_MASTER_KEY`.
+- Webhooks con verificación de firma e idempotencia.
+- Notificación al dueño por Telegram/WhatsApp al confirmar pago.
+
+## Fase 4 — Auth y apartados (`fd87bac`, `58b9e6f`)
+- Registro/login del cliente final con bcrypt + JWT (`SHOP_JWT_SECRET`).
+- Endpoints `/api/shop/me` y `/api/shop/layaways`.
+- `applyPaidPayment` idempotente y consciente de apartados (claim atómico).
+- Abonos del cliente vía `POST /api/shop/layaways/[id]/payments`.
+- Cron de expiración `/api/cron/expire-layaways` (header `x-cron-secret`).
+- Detalle completo: **[`docs/FASE4_AUTH_APARTADOS.md`](./docs/FASE4_AUTH_APARTADOS.md)**.
+
+## Fase 5 — Dashboard admin (`206a43d`, `8a6b961`)
+- `/admin/tiendas` — selector con KPIs por tienda.
+- `/admin/tiendas/[id]` — overview con ingresos 30d.
+- Pedidos con filtros + detalle con cambio de estado (respeta `TRANSITIONS`).
+- Apartados con barra de progreso (vencidos/próximos resaltados).
+- Productos con editor completo (crear/editar/desactivar).
+- Ventas con Recharts (LineChart, PieChart, BarChart).
+- Configuración editable con llaves cifradas.
+- Detalle: **[`docs/FASE5_DASHBOARD_ADMIN.md`](./docs/FASE5_DASHBOARD_ADMIN.md)**.
+
+## Referencia de API
+**[`docs/API.md`](./docs/API.md)** — todos los endpoints reales con headers,
+ejemplos curl y códigos de estado.
+
+## Estado y siguiente paso
+Ver **[`ESTADO_PROYECTO.md`](./ESTADO_PROYECTO.md)** — checkpoint vivo que se
+actualiza con cada sesión de trabajo.

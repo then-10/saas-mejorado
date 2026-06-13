@@ -492,3 +492,28 @@ Requiere un cambio en el código. Modifica el enum `BusinessType` en `/admin-pan
 ---
 
 *Para soporte técnico del sistema, contacta al equipo de desarrollo.*
+
+
+---
+
+## 🛍️ Administración de tiendas (Módulo E-commerce)
+
+El módulo e-commerce vive en **/admin/tiendas**. Para guías operativas detalladas:
+- Activar una tienda nueva, configurar pagos, gestionar productos, atender pedidos
+  y apartados, leer reportes → **[`docs/FASE5_DASHBOARD_ADMIN.md`](./docs/FASE5_DASHBOARD_ADMIN.md)**
+- Entender qué pasa cuando un cliente abona en efectivo o cuando vence un apartado
+  → **[`docs/FASE4_AUTH_APARTADOS.md`](./docs/FASE4_AUTH_APARTADOS.md)**
+- Endpoints disponibles si quieres automatizar algo → **[`docs/API.md`](./docs/API.md)**
+
+### Reglas importantes
+1. **El `X-Tenant-Key` (`tk_...`) es el secreto de la tienda en la app**. Se
+   genera al crear la `Store` y se ve en `/admin/tiendas/[id]/configuracion`.
+2. **Las llaves de Mercado Pago y Conekta se cifran al guardar y nunca se
+   muestran de vuelta**. Si se pierden, hay que regenerarlas en el dashboard
+   del proveedor.
+3. **Soft delete de productos**: desactivar oculta el producto en la app pero
+   conserva el historial en pedidos. NO existe hard delete por integridad.
+4. **Transiciones de estado de pedidos**: el panel solo ofrece las transiciones
+   válidas. Por ejemplo, un pedido en `DELIVERED` no permite más cambios.
+5. **El cron de expiración** (`/api/cron/expire-layaways`) debe correr al menos
+   cada hora; los apartados vencidos no se mueven automáticamente sin él.
