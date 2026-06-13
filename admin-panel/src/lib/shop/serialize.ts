@@ -69,7 +69,7 @@ export function serializeLayaway(l: {
     total: unknown
     status: string
     createdAt: Date
-    items?: { productName: string; quantity: number }[]
+    items?: { name: string; quantity: number }[]
     payments?: { id: string; amount: unknown; method: string; status: string; paidAt: Date | null }[]
   } | null
 }) {
