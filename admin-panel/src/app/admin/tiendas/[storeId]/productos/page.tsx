@@ -35,11 +35,17 @@ export default async function ProductsPage({
 
   return (
     <div className="space-y-6">
-      <header>
-        <Link href={`/admin/tiendas/${params.storeId}`} className="text-xs text-gray-500 hover:text-gray-700">
-          ← {store.name}
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900 mt-1">Productos</h1>
+      <header className="flex items-start justify-between">
+        <div>
+          <Link href={`/admin/tiendas/${params.storeId}`} className="text-xs text-gray-500 hover:text-gray-700">
+            ← {store.name}
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-900 mt-1">Productos</h1>
+        </div>
+        <Link
+          href={`/admin/tiendas/${params.storeId}/productos/nuevo`}
+          className="bg-indigo-600 text-white text-sm px-4 py-2 rounded hover:bg-indigo-700"
+        >+ Nuevo producto</Link>
       </header>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -72,7 +78,10 @@ export default async function ProductsPage({
                   )}
                 </td>
                 <td className="px-4 py-2">
-                  <div className="font-medium">{p.name}</div>
+                  <Link
+                    href={`/admin/tiendas/${params.storeId}/productos/${p.id}/editar`}
+                    className="font-medium text-indigo-600 hover:text-indigo-800"
+                  >{p.name}</Link>
                   <div className="text-xs text-gray-500 line-clamp-1">{p.description}</div>
                 </td>
                 <td className="px-4 py-2 text-xs text-gray-600">{p.category}</td>

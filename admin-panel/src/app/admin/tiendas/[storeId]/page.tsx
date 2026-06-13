@@ -88,7 +88,7 @@ export default async function StoreOverviewPage({ params }: { params: { storeId:
       </div>
 
       {/* Secciones */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <SectionLink
           href={`/admin/tiendas/${store.id}/pedidos`}
           title="Pedidos"
@@ -105,6 +105,16 @@ export default async function StoreOverviewPage({ params }: { params: { storeId:
           title="Productos"
           summary={`${kpis.productsActive} activos · ${kpis.productsLowStock} con stock bajo (≤5)`}
           highlight={kpis.productsLowStock > 0}
+        />
+        <SectionLink
+          href={`/admin/tiendas/${store.id}/ventas`}
+          title="Ventas"
+          summary="Gráficas e ingresos por período"
+        />
+        <SectionLink
+          href={`/admin/tiendas/${store.id}/configuracion`}
+          title="Configuración"
+          summary="Apartados, proveedor de pagos y datos generales"
         />
       </div>
 
