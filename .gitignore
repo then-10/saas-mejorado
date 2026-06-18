@@ -54,3 +54,4 @@ Thumbs.db
 tmp/
 temp/
 admin-panel/tsconfig.tsbuildinfo
+admin-panel/next-env.d.ts
