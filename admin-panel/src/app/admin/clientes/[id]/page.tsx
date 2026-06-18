@@ -6,19 +6,22 @@ import FeatureToggles from '@/components/FeatureToggles'
 import ChangePlanModal from '@/components/ChangePlanModal'
 
 async function getClient(id: string) {
-  const client = await prisma.client.findUnique({
+  return prisma.client.findUnique({
     where: { id },
     include: {
       features: true,
       config: true,
-      activityLogs: {
-        orderBy: { createdAt: 'desc' },
-        take: 20,
-        include: { admin: { select: { name: true } } },
-      },
     },
   })
-  return client
+}
+
+async function getActivityLogs(clientId: string) {
+  return prisma.activityLog.findMany({
+    where: { entityId: clientId },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+    include: { admin: { select: { name: true } } },
+  })
 }
 
 const planBadge = {
@@ -40,7 +43,10 @@ const statusLabel = {
 }
 
 export default async function ClientDetailPage({ params }: { params: { id: string } }) {
-  const client = await getClient(params.id)
+  const [client, activityLogs] = await Promise.all([
+    getClient(params.id),
+    getActivityLogs(params.id),
+  ])
   if (!client) notFound()
 
   const featureMap = Object.fromEntries(client.features.map((f) => [f.featureKey, f]))
@@ -147,11 +153,11 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
           {/* Activity Log */}
           <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
             <h3 className="text-sm font-semibold text-gray-900 mb-4">Historial de Actividad</h3>
-            {client.activityLogs.length === 0 ? (
+            {activityLogs.length === 0 ? (
               <p className="text-sm text-gray-400 py-4 text-center">Sin actividad registrada</p>
             ) : (
               <div className="space-y-3">
-                {client.activityLogs.map((log) => (
+                {activityLogs.map((log) => (
                   <div key={log.id} className="flex items-start gap-3 text-sm">
                     <div className="w-2 h-2 bg-indigo-400 rounded-full mt-1.5 shrink-0" />
                     <div className="flex-1">

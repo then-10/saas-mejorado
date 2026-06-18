@@ -1,3 +1,4 @@
+// Activity log page
 import { prisma } from '@/lib/prisma'
 
 async function getActivity() {
@@ -6,7 +7,6 @@ async function getActivity() {
     take: 100,
     include: {
       admin: { select: { name: true } },
-      client: { select: { name: true } },
     },
   })
 }
@@ -39,7 +39,6 @@ export default async function ActividadPage() {
                   )}
                   <p className="text-xs text-gray-400 mt-1">
                     {log.admin?.name || 'Sistema'}
-                    {log.client?.name && ` — ${log.client.name}`}
                   </p>
                 </div>
                 <span className="text-xs text-gray-400 shrink-0">

@@ -11,6 +11,21 @@ SaaS Mejorado es una plataforma integral de ventas potenciada por IA que combina
 - **Automatización de Flujos de Trabajo** con n8n
 - **Integración con APIs Externas** (Bitrix24, CRM providers)
 
+
+## 🛍️ Módulo E-commerce (Fases 1-5 ENTREGADAS)
+
+Sobre este SaaS se agregó un **módulo completo de e-commerce multi-tenant**:
+cada cliente del SaaS tiene su propia app Android (`then-10/tiendaropa-android`)
+con catálogo, pedidos, pagos (Mercado Pago / Conekta), apartados con abonos y
+notificaciones al dueño. El super-admin lo administra desde `/admin/tiendas`.
+
+- **Estado**: F1, F3, F4 y F5 en `main`. Ver [`ESTADO_PROYECTO.md`](./ESTADO_PROYECTO.md).
+- **Documentación**:
+  - [`docs/MODULO_ECOMMERCE.md`](./docs/MODULO_ECOMMERCE.md) — visión general, mapa del código, variables.
+  - [`docs/API.md`](./docs/API.md) — referencia de endpoints (cliente, admin, webhooks, cron).
+  - [`docs/FASE4_AUTH_APARTADOS.md`](./docs/FASE4_AUTH_APARTADOS.md) — auth de clientes y semántica de apartados.
+  - [`docs/FASE5_DASHBOARD_ADMIN.md`](./docs/FASE5_DASHBOARD_ADMIN.md) — guía operativa del dashboard.
+
 ## 🏗️ Arquitectura
 
 Ver `ARCHITECTURE.md` para documentación completa de la arquitectura del sistema.

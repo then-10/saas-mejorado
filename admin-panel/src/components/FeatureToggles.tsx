@@ -18,6 +18,7 @@ const CONFIGURABLE_FEATURES = new Set([
   'menu_digital', 'catalogo_digital', 'reservaciones',
   'crm_basico', 'crm_avanzado', 'analytics_basico', 'analytics_avanzado',
   'notificaciones_email', 'notificaciones_sms', 'soporte_prioritario',
+  'generacion_imagenes',
 ])
 
 export default function FeatureToggles({ clientId, features, featureMap, configMap }: Props) {
@@ -34,11 +35,12 @@ export default function FeatureToggles({ clientId, features, featureMap, configM
     setLocalState((prev) => ({ ...prev, [featureKey]: newValue }))
 
     try {
-      await fetch(`/api/admin/clientes/${clientId}/features`, {
+      const res = await fetch(`/api/admin/clientes/${clientId}/features`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ featureKey, enabled: newValue }),
       })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       router.refresh()
     } catch {
       setLocalState((prev) => ({ ...prev, [featureKey]: !newValue }))
@@ -152,6 +154,7 @@ function FeatureIcon({ icon }: { icon: string }) {
     Mail: '📧',
     MessageCircle: '💌',
     Headphones: '🎧',
+    ImagePlus: '🎨',
   }
   return <span>{icons[icon] || '⚙️'}</span>
 }

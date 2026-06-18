@@ -1,0 +1,9 @@
+{
+  "model": "claude-sonnet-4-6",
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev)",
+      "Bash(python bot_improved.py)"
+    ]
+  }
+}

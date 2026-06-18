@@ -105,6 +105,13 @@ export const FEATURES: Record<string, FeatureDef> = {
     icon: 'Headphones',
     plans: ['ENTERPRISE'],
   },
+  generacion_imagenes: {
+    key: 'generacion_imagenes',
+    name: 'Generación de Imágenes IA',
+    description: 'Crea imágenes con DALL-E 3 desde el bot',
+    icon: 'ImagePlus',
+    plans: ['PROFESIONAL', 'ENTERPRISE'],
+  },
 }
 
 export const ALL_FEATURE_KEYS = Object.keys(FEATURES)
