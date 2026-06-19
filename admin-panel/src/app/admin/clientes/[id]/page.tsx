@@ -4,6 +4,7 @@ import { FEATURES, PLAN_LABELS, BUSINESS_TYPE_LABELS, PLAN_PRICES } from '@/lib/
 import Link from 'next/link'
 import FeatureToggles from '@/components/FeatureToggles'
 import ChangePlanModal from '@/components/ChangePlanModal'
+import StoreAddOnCard from '@/components/StoreAddOnCard'
 
 async function getClient(id: string) {
   return prisma.client.findUnique({
@@ -11,6 +12,7 @@ async function getClient(id: string) {
     include: {
       features: true,
       config: true,
+      store: { select: { id: true, apiKey: true, monthlyPrice: true } },
     },
   })
 }
@@ -135,6 +137,17 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
               <span className="text-sm font-medium text-gray-900">{client.monthlyLeads}</span>
             </div>
           </div>
+
+          <StoreAddOnCard
+            clientId={client.id}
+            clientName={client.name}
+            clientEmail={client.email}
+            store={
+              client.store
+                ? { id: client.store.id, apiKey: client.store.apiKey, monthlyPrice: Number(client.store.monthlyPrice) }
+                : null
+            }
+          />
         </div>
 
         {/* Right: Features + Activity */}

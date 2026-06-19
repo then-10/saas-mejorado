@@ -1,6 +1,16 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+
+interface ApiProduct {
+  id: string
+  name: string
+  description: string
+  price: number
+  category: string
+  sizes: string[]
+  stock: number
+}
 
 const ACCENT = '#E94560'
 
@@ -85,6 +95,98 @@ function fmt(n: number) {
 type Tab = 'ventas' | 'productos' | 'publicaciones' | 'clientes'
 
 export default function TiendaRopaPage() {
+  // Conexión real al backend e-commerce (X-Tenant-Key + login de empleado del POS).
+  const [tenantKey, setTenantKey] = useState('')
+  const [employeeToken, setEmployeeToken] = useState('')
+  const [employeeName, setEmployeeName] = useState('')
+  const [authReady, setAuthReady] = useState(false)
+  const [loginTenantKey, setLoginTenantKey] = useState('')
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
+  const [loginLoading, setLoginLoading] = useState(false)
+  const [demoMode, setDemoMode] = useState(true)
+
+  useEffect(() => {
+    const savedKey = window.localStorage.getItem('pos_tenant_key')
+    const savedToken = window.localStorage.getItem('pos_employee_token')
+    const savedName = window.localStorage.getItem('pos_employee_name')
+    if (savedKey && savedToken) {
+      setTenantKey(savedKey)
+      setEmployeeToken(savedToken)
+      setEmployeeName(savedName || '')
+      setAuthReady(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!authReady) return
+    let cancelled = false
+    fetch('/api/shop/products', { headers: { 'X-Tenant-Key': tenantKey } })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: { products: ApiProduct[] }) => {
+        if (cancelled) return
+        setProducts(
+          data.products.map((p) => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            price: p.price,
+            stock: p.stock,
+            sizes: p.sizes,
+            desc: p.description,
+          }))
+        )
+        setDemoMode(false)
+      })
+      .catch(() => setDemoMode(true))
+    return () => {
+      cancelled = true
+    }
+  }, [authReady, tenantKey])
+
+  async function handleLogin() {
+    if (!loginTenantKey.trim() || !loginEmail.trim() || !loginPassword.trim()) {
+      setLoginError('Completa tenant key, email y contraseña')
+      return
+    }
+    setLoginLoading(true)
+    setLoginError('')
+    try {
+      const res = await fetch('/api/shop/employees/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-Key': loginTenantKey.trim() },
+        body: JSON.stringify({ email: loginEmail.trim(), password: loginPassword }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setLoginError(data.error || 'No se pudo iniciar sesión')
+        setLoginLoading(false)
+        return
+      }
+      window.localStorage.setItem('pos_tenant_key', loginTenantKey.trim())
+      window.localStorage.setItem('pos_employee_token', data.token)
+      window.localStorage.setItem('pos_employee_name', data.employee.name)
+      setTenantKey(loginTenantKey.trim())
+      setEmployeeToken(data.token)
+      setEmployeeName(data.employee.name)
+      setAuthReady(true)
+    } catch {
+      setLoginError('Error de conexión con el servidor')
+    }
+    setLoginLoading(false)
+  }
+
+  function handleLogout() {
+    window.localStorage.removeItem('pos_tenant_key')
+    window.localStorage.removeItem('pos_employee_token')
+    window.localStorage.removeItem('pos_employee_name')
+    setAuthReady(false)
+    setTenantKey('')
+    setEmployeeToken('')
+    setEmployeeName('')
+  }
+
   const [tab, setTab] = useState<Tab>('ventas')
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS)
   const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS)
@@ -145,9 +247,33 @@ export default function TiendaRopaPage() {
     setSaleOpen(true)
   }
 
-  function confirmSale() {
+  async function confirmSale() {
     const p = products.find((x) => x.id === saleProductId)
     if (!p || !saleClient.trim()) return
+
+    // Venta de mostrador pagada y conectada al backend real: se registra en la BD del tenant.
+    if (authReady && !demoMode && saleStatus === 'PAGADO') {
+      try {
+        const res = await fetch('/api/shop/pos/orders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Tenant-Key': tenantKey,
+            Authorization: `Bearer ${employeeToken}`,
+          },
+          body: JSON.stringify({ items: [{ productId: p.id, quantity: saleQty, size: saleSize }] }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          showToast(data.error || 'No se pudo registrar la venta')
+          return
+        }
+      } catch {
+        showToast('Error de conexión al registrar la venta')
+        return
+      }
+    }
+
     const total = p.price * saleQty
     const timeLabel = 'Hoy · Ahora'
     const newOrder: Order = {
@@ -168,7 +294,7 @@ export default function TiendaRopaPage() {
     setOrders((prev) => [newOrder, ...prev])
     setProducts((prev) => prev.map((x) => (x.id === p.id ? { ...x, stock: Math.max(0, x.stock - saleQty) } : x)))
     setSaleOpen(false)
-    showToast('Venta registrada')
+    showToast(authReady && !demoMode && saleStatus === 'PAGADO' ? 'Venta registrada en el servidor' : 'Venta registrada (local)')
   }
 
   function openForm(id: string | null) {
@@ -329,17 +455,60 @@ export default function TiendaRopaPage() {
   const saleProduct = products.find((p) => p.id === saleProductId) || null
   const saleTotal = fmt(saleProduct ? saleProduct.price * saleQty : 0)
 
+  if (!authReady) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center py-8">
+        <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-200">
+          <div className="px-5 pt-5 pb-4" style={{ backgroundColor: '#1A1A2E' }}>
+            <h1 className="text-white text-lg font-semibold">Iniciar sesión — POS</h1>
+            <p className="text-white/60 text-xs mt-1">Usa el X-Tenant-Key y las credenciales de empleado de tu tienda.</p>
+          </div>
+          <div className="p-5 space-y-3">
+            <Field label="X-Tenant-Key" value={loginTenantKey} onChange={setLoginTenantKey} placeholder="tk_..." />
+            <Field label="Email" value={loginEmail} onChange={setLoginEmail} placeholder="dueño@tienda.com" />
+            <Field label="Contraseña" value={loginPassword} onChange={setLoginPassword} placeholder="••••••••" type="password" />
+            {loginError && <p className="text-xs text-red-600">{loginError}</p>}
+            <button
+              onClick={handleLogin}
+              disabled={loginLoading}
+              className="w-full py-2.5 rounded-xl text-white text-sm font-medium disabled:opacity-60"
+              style={{ backgroundColor: ACCENT }}
+            >
+              {loginLoading ? 'Conectando...' : 'Entrar'}
+            </button>
+            <button
+              onClick={() => { setAuthReady(true); setDemoMode(true) }}
+              className="w-full py-2.5 rounded-xl border border-gray-300 text-sm text-gray-600"
+            >
+              Continuar en modo demo (sin conexión)
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center py-8">
       <div className="w-full max-w-sm bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-200">
         {/* App bar */}
-        <div className="px-5 pt-5 pb-4" style={{ backgroundColor: '#1A1A2E' }}>
-          <h1 className="text-white text-lg font-semibold">
-            {tab === 'ventas' && 'Ventas'}
-            {tab === 'productos' && 'Productos'}
-            {tab === 'publicaciones' && 'Publicaciones IA'}
-            {tab === 'clientes' && 'Clientes'}
-          </h1>
+        <div className="px-5 pt-5 pb-4 flex items-center justify-between" style={{ backgroundColor: '#1A1A2E' }}>
+          <div>
+            <h1 className="text-white text-lg font-semibold">
+              {tab === 'ventas' && 'Ventas'}
+              {tab === 'productos' && 'Productos'}
+              {tab === 'publicaciones' && 'Publicaciones IA'}
+              {tab === 'clientes' && 'Clientes'}
+            </h1>
+            <p className="text-white/50 text-[11px] mt-0.5">
+              {demoMode ? 'Modo demo (sin conexión)' : `Conectado · ${employeeName}`}
+            </p>
+          </div>
+          {employeeName && (
+            <button onClick={handleLogout} className="text-white/60 hover:text-white text-xs">
+              Salir
+            </button>
+          )}
         </div>
 
         <div className="h-[600px] overflow-y-auto p-4 space-y-3">
@@ -784,6 +953,33 @@ function ClientesTab({
         )
       })}
     </div>
+  )
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = 'text',
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+  type?: string
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs text-gray-500">{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+      />
+    </label>
   )
 }
 

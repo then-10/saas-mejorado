@@ -146,7 +146,7 @@ enum LayawayStatus {
 model Store {
   id                String               @id @default(cuid())
   clientId          String               @unique // tenant: FK al Client existente
-  apiKey            String               @unique // X-Tenant-Key que usa la app Android
+  apiKey            String               @unique // X-Tenant-Key que usa la app Android y el POS web
   name              String
   currency          String               @default("MXN")
   paymentProvider   PaymentProviderType  @default(MERCADO_PAGO)
@@ -155,12 +155,36 @@ model Store {
   layawayDepositPct Int                  @default(30)
   layawayDays       Int                  @default(30)
   address           String?
+  // Add-on App + POS: cargo mensual independiente del Plan del Client
+  monthlyPrice      Decimal              @db.Decimal(10, 2) @default(499)
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
   client            Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
   products          Product[]
   customers         Customer[]
   orders            Order[]
+  employees         Employee[]
+}
+
+enum EmployeeRole {
+  OWNER
+  STAFF
+}
+
+// Cuentas del POS web (dueño/empleados de mostrador), separadas de Customer (comprador final).
+model Employee {
+  id           String       @id @default(cuid())
+  storeId      String
+  name         String
+  email        String
+  passwordHash String
+  role         EmployeeRole @default(STAFF)
+  active       Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  store        Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, email])
 }
 
 model Product {
