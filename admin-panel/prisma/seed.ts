@@ -4,7 +4,11 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-  const passwordHash = await bcrypt.hash('Admin123!', 12)
+  const seedPassword = process.env.SEED_ADMIN_PASSWORD
+  if (!seedPassword) {
+    throw new Error('SEED_ADMIN_PASSWORD no está definida. No se generan contraseñas por defecto.')
+  }
+  const passwordHash = await bcrypt.hash(seedPassword, 12)
 
   const admin = await prisma.adminUser.upsert({
     where: { email: 'admin@saas.com' },
