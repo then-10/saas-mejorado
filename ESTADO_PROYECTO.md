@@ -12,13 +12,26 @@
 ---
 
 ## 📍 Estado actual
-- **Fecha:** 2026-06-12 · **Rama única:** `main`
-- **Último hito:** F5 extras ENTREGADOS — editor completo de productos (crear/editar/desactivar), página de Ventas con Recharts (ingresos por día, métodos de pago, top productos), configuración editable de tienda (con llaves de pago cifradas AES-256-GCM al guardar).
-  saneada, schema deduplicado y validado, ramas eliminadas (solo existe main).
+- **Fecha:** 2026-06-19 · **Rama única:** `main`
+- **Último hito:** Add-on "App + POS web" (PR #9, squash `ee7fefa`) + POS embebido en
+  panel admin (sesión NextAuth, sin tenant key) MERGEADO y validado con code-review +
+  security-audit. Hallazgos corregidos: passwordHash del walk-in customer ya no es
+  predecible (era `email+storeId`, ahora `randomBytes(32)`), y la venta admin queda
+  registrada en `ActivityLog` (acción `POS_SALE`). `.env.example` corregido — faltaban
+  `CIPHER_MASTER_KEY`, `MERCADO_PAGO_WEBHOOK_SECRET`, `CONEKTA_WEBHOOK_SECRET`,
+  `NEXT_PUBLIC_BASE_URL` (el código ya los exige en runtime, solo no estaban
+  documentados). `tsc --noEmit` y `npm run build` limpios tras el merge.
+- **Modelo de acceso admin (no es bug, es el diseño actual):** cualquier `AdminUser`
+  autenticado (SUPER_ADMIN/ADMIN) puede operar cualquier `Store` — no hay ACL por
+  tienda. Es el mismo modelo que ya usan `/api/admin/shop/products`,
+  `/api/admin/shop/orders`, etc. desde F5. Si se requiere restringir admins a tiendas
+  específicas, es una feature nueva (tabla de asignación admin↔store), no algo que
+  arregle este módulo aisladamente.
 
 ## ✅ Hecho y verificado (evidencia = commit en main)
 | Qué | Evidencia |
 |---|---|
+| Add-on App+POS mensual (`ClientAddOn`) + POS embebido en admin (`/admin/tiendas/[id]/pos`, sesión NextAuth) + lógica de venta compartida `createPosSale.ts` (usada también por `/api/shop/pos/orders`, empleado+X-Tenant-Key) | PR #9 → `ee7fefa` + merge local `4299098` + fix seguridad (sin commit aparte, mismo merge) |
 | F1 — Módulo e-commerce (12 modelos, endpoints shop+admin, multi-tenant X-Tenant-Key, auth clientes login/register con signCustomerToken) | `f74810f` + fix `3d2b528` |
 | Fix schema duplicado (¡F1 lo commiteó doble!) validado con getDMMF | `3d2b528` |
 | F3 — Pagos backend: adapters MP/Conekta, encryption AES-256-GCM, endpoint crear/verificar pago, webhooks con firma+idempotencia, notificación al dueño (Telegram/WhatsApp por fetch) | `835eb5c` |
@@ -34,17 +47,22 @@
 
 ## 🚧 NO hecho todavía (no asumir lo contrario)
 - Deploy real en Railway con env vars (CIPHER_MASTER_KEY, SHOP_JWT_SECRET,
-  CRON_SECRET, MP/CONEKTA_WEBHOOK_SECRET) + registrar webhooks en MP/Conekta +
-  configurar cron hacia `/api/cron/expire-layaways` con `x-cron-secret`.
+  CRON_SECRET, MP/CONEKTA_WEBHOOK_SECRET, NEXT_PUBLIC_BASE_URL) + registrar
+  webhooks en MP/Conekta + configurar cron hacia `/api/cron/expire-layaways`
+  con `x-cron-secret`. `.env.example` ya documenta las 4 que faltaban (2026-06-19).
 - Compilar APK por flavor en máquina del usuario:
   `./gradlew assembleDemoDebug -PdemoSHOP_TENANT_KEY=tk_...` (cloud no tiene SDK).
 - Tests automatizados (no existe suite; ver `.claude/rules/testing.md`)
+- Probar en real el flujo POS nuevo (admin embebido y empleado+X-Tenant-Key):
+  venta de mostrador → stock decrementado → aparece en `/admin/tiendas/[id]/ventas`.
 
 ## ▶️ SIGUIENTE PASO EXACTO
-1. **Deploy del SaaS en Railway** con env vars de F3/F4 (CIPHER_MASTER_KEY,
-   SHOP_JWT_SECRET, CRON_SECRET, MP/CONEKTA_WEBHOOK_SECRET). Registrar webhooks
-   en MP/Conekta. Configurar scheduler horario hacia `/api/cron/expire-layaways`
-   con `x-cron-secret`. Ver `.claude/skills/deploy/deploy-config.md`.
+1. **Deploy del SaaS en Railway** con env vars completas (ver `.env.example`
+   actualizado: CIPHER_MASTER_KEY, SHOP_JWT_SECRET, CRON_SECRET,
+   MERCADO_PAGO_WEBHOOK_SECRET, CONEKTA_WEBHOOK_SECRET, NEXT_PUBLIC_BASE_URL).
+   Registrar webhooks en MP/Conekta apuntando a `https://<host>/webhook/{mercadopago,conekta}`.
+   Configurar scheduler horario hacia `/api/cron/expire-layaways` con `x-cron-secret`.
+   Ver `.claude/skills/deploy/deploy-config.md`.
 2. **Validar builds Android por flavor** en la máquina del usuario
    (`./gradlew assembleGenericDebug` y `./gradlew assembleDemoDebug
    -PdemoSHOP_BASE_URL=... -PdemoSHOP_TENANT_KEY=tk_...`).

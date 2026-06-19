@@ -1,4 +1,5 @@
 import bcrypt from 'bcryptjs'
+import { randomBytes } from 'crypto'
 import { Prisma, type Product } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
@@ -30,7 +31,7 @@ export async function createPosSale(storeId: string, items: PosSaleItemInput[]) 
         storeId,
         name: 'Venta de mostrador',
         email: WALK_IN_EMAIL,
-        passwordHash: await bcrypt.hash(WALK_IN_EMAIL + storeId, 10),
+        passwordHash: await bcrypt.hash(randomBytes(32).toString('hex'), 10),
       },
     })
 

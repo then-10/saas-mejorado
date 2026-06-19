@@ -37,6 +37,15 @@ export async function POST(req: NextRequest) {
 
   try {
     const order = await createPosSale(storeId, items)
+    await prisma.activityLog.create({
+      data: {
+        adminId: (session.user as { id?: string }).id ?? null,
+        action: 'POS_SALE',
+        entityType: 'Order',
+        entityId: order.id,
+        details: `Venta de mostrador por $${order.total} en ${store.name}`,
+      },
+    })
     return NextResponse.json({ order: serializeOrder(order) }, { status: 201 })
   } catch (e) {
     if (e instanceof PosSaleError && e.code === 'OUT_OF_STOCK') {
