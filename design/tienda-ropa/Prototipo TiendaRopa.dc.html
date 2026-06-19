@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: #e7e5df; font-family: Roboto, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  @keyframes tr-spin { to { transform: rotate(360deg); } }
+  @keyframes tr-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes tr-pop { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: scale(1); } }
+  .tr-scroll::-webkit-scrollbar { width: 0; }
+</style>
+</helmet>
+
+<div style="min-height:100vh; width:100%; display:flex; align-items:center; justify-content:center; padding:32px 16px;">
+  <div style="width:412px; height:892px; background:#0e0d12; border-radius:46px; padding:7px; box-shadow:0 40px 90px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.04); flex:none;">
+    <div style="width:100%; height:100%; background:#FAFAFA; border-radius:39px; overflow:hidden; position:relative; display:flex; flex-direction:column;">
+
+      <!-- Status bar -->
+      <div style="height:36px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:0 22px; background:#FFFFFF; position:relative; z-index:5;">
+        <span style="font-size:14px; font-weight:500; color:#1A1A2E; letter-spacing:.3px;">9:30</span>
+        <div style="position:absolute; left:50%; top:9px; transform:translateX(-50%); width:11px; height:11px; border-radius:50%; background:#0e0d12;"></div>
+        <div style="display:flex; align-items:center; gap:6px; color:#1A1A2E;">
+          <svg width="16" height="12" viewBox="0 0 18 12" fill="currentColor"><path d="M9 2.6c2.3 0 4.4.9 6 2.4l1.2-1.3A11.3 11.3 0 0 0 9 .6 11.3 11.3 0 0 0 1.8 3.7L3 5C4.6 3.5 6.7 2.6 9 2.6zM9 6.3c1.3 0 2.5.5 3.4 1.4l1.2-1.3A7 7 0 0 0 9 4.3a7 7 0 0 0-4.6 2.1l1.2 1.3C6.5 6.8 7.7 6.3 9 6.3zM9 10l2-2.2A4 4 0 0 0 9 7a4 4 0 0 0-2 .8L9 10z"/></svg>
+          <svg width="22" height="12" viewBox="0 0 24 12" fill="none"><rect x="1" y="1.5" width="20" height="9" rx="2.5" stroke="currentColor" stroke-width="1.4"/><rect x="2.6" y="3" width="15" height="6" rx="1.2" fill="currentColor"/><rect x="22" y="4" width="1.6" height="4" rx=".8" fill="currentColor"/></svg>
+        </div>
+      </div>
+
+      <!-- ============ TOP APP BARS ============ -->
+      <sc-if value="{{ isVentas }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:none; background:#FFFFFF; padding:8px 8px 12px 20px; display:flex; align-items:center; box-shadow:0 1px 0 rgba(26,26,46,.06);">
+          <span style="font-size:22px; font-weight:700; color:#1A1A2E; flex:1;">Ventas</span>
+          <div style="width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#FFDADA; color:#5b0010; font-weight:700; font-size:15px;">TR</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isProductos }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:none; background:#FFFFFF; padding:8px 16px 12px 20px; box-shadow:0 1px 0 rgba(26,26,46,.06);">
+          <div style="display:flex; align-items:center; margin-bottom:10px;">
+            <span style="font-size:22px; font-weight:700; color:#1A1A2E; flex:1;">Productos</span>
+            <div style="width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#FFDADA; color:#5b0010; font-weight:700; font-size:15px;">TR</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px; background:#F2F2F7; border-radius:14px; padding:0 14px; height:46px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#6b6b78"><path d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.49 4.49 0 0 1 9.5 14z"/></svg>
+            <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Buscar por nombre o categoría…" style="flex:1; border:none; outline:none; background:transparent; font-family:Roboto,sans-serif; font-size:15px; color:#1A1A2E;" />
+            <sc-if value="{{ hasSearch }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ clearSearch }}" style="border:none; background:transparent; cursor:pointer; padding:4px; display:flex;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#6b6b78"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+              </button>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isPublicaciones }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:none; background:#FFFFFF; padding:8px 8px 12px 20px; display:flex; align-items:center; box-shadow:0 1px 0 rgba(26,26,46,.06);">
+          <span style="font-size:22px; font-weight:700; color:#1A1A2E; flex:1;">IA Marketing ✨</span>
+          <button onClick="{{ openMkSettings }}" style="width:40px; height:40px; border:none; background:transparent; color:#6b6b78; cursor:pointer; font-size:20px; display:flex; align-items:center; justify-content:center;">⚙️</button>
+          <div style="width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#FFDADA; color:#5b0010; font-weight:700; font-size:15px;">TR</div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isClientes }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:none; background:#FFFFFF; padding:8px 8px 12px 20px; display:flex; align-items:center; box-shadow:0 1px 0 rgba(26,26,46,.06);">
+          <span style="font-size:22px; font-weight:700; color:#1A1A2E; flex:1;">Clientes</span>
+          <div style="width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; background:#FFDADA; color:#5b0010; font-weight:700; font-size:15px;">TR</div>
+        </div>
+      </sc-if>
+
+      <!-- ============ SCROLL CONTENT ============ -->
+      <div class="tr-scroll" style="flex:1; overflow-y:auto; overflow-x:hidden; position:relative;">
+
+        <!-- ----- VENTAS ----- -->
+        <sc-if value="{{ isVentas }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:16px 16px 110px;">
+            <div style="display:flex; gap:12px; margin-bottom:12px;">
+              <div style="flex:1; background:#FFFFFF; border-radius:16px; padding:16px; box-shadow:0 1px 3px rgba(26,26,46,.07);">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="#E94560"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
+                <div style="font-size:12px; color:rgba(26,26,46,.55); margin-top:8px;">Hoy</div>
+                <div style="font-size:18px; font-weight:700; color:#1A1A2E;">{{ todayRevenue }}</div>
+              </div>
+              <div style="flex:1; background:#FFFFFF; border-radius:16px; padding:16px; box-shadow:0 1px 3px rgba(26,26,46,.07);">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="#F5A623"><path d="M18 6h-2c0-2.21-1.79-4-4-4S8 3.79 8 6H6c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-6-2c1.1 0 2 .9 2 2h-4c0-1.1.9-2 2-2zm0 10c-2.76 0-5-2.24-5-5h2c0 1.66 1.34 3 3 3s3-1.34 3-3h2c0 2.76-2.24 5-5 5z"/></svg>
+                <div style="font-size:12px; color:rgba(26,26,46,.55); margin-top:8px;">Pedidos hoy</div>
+                <div style="font-size:18px; font-weight:700; color:#1A1A2E;">{{ todayCount }}</div>
+              </div>
+            </div>
+            <div style="background:#FCE7C2; border-radius:16px; padding:16px; display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="#4a2f00"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"/></svg>
+              <div>
+                <div style="font-size:12px; color:rgba(74,47,0,.7);">Semana</div>
+                <div style="font-size:21px; font-weight:700; color:#4a2f00;">{{ weekRevenue }}</div>
+              </div>
+            </div>
+
+            <!-- Sub-tabs Ventas -->
+            <div style="display:flex; gap:8px; margin-bottom:16px;">
+              <button onClick="{{ onVentasSeg }}" style="flex:1; padding:11px 8px; border:none; background:{{ ventasSegBg }}; color:{{ ventasSegFg }}; border-radius:12px; font-weight:700; font-size:13px; cursor:pointer; font-family:Roboto,sans-serif;">En seguimiento {{ seguimientoLabel }}</button>
+              <button onClick="{{ onVentasComp }}" style="flex:1; padding:11px 8px; border:none; background:{{ ventasCompBg }}; color:{{ ventasCompFg }}; border-radius:12px; font-weight:700; font-size:13px; cursor:pointer; font-family:Roboto,sans-serif;">Completados {{ completadosLabel }}</button>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <sc-for list="{{ orders }}" as="o" hint-placeholder-count="4">
+                <div style="background:#FFFFFF; border-radius:16px; padding:14px; box-shadow:0 1px 3px rgba(26,26,46,.07); display:flex; align-items:flex-start; gap:12px;">
+                  <div style="width:52px; height:52px; border-radius:12px; flex:none; overflow:hidden; background:repeating-linear-gradient(135deg,#efedf2 0 7px,#e6e3ea 7px 14px); display:flex; align-items:center; justify-content:center;">
+                    <span style="font-family:ui-monospace,Menlo,monospace; font-size:18px; font-weight:700; color:rgba(26,26,46,.32);">{{ o.avatar }}</span>
+                  </div>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:15px; font-weight:600; color:#1A1A2E;">{{ o.productName }}</div>
+                    <div style="font-size:13px; color:rgba(26,26,46,.6); margin-top:2px;">{{ o.sub }}</div>
+                    <div style="display:flex; align-items:center; gap:5px; margin-top:5px; min-width:0;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="rgba(26,26,46,.45)" style="flex:none;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                      <span style="font-size:12px; font-weight:500; color:#1A1A2E; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ o.client }}</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:5px; margin-top:3px; min-width:0;">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="rgba(26,26,46,.4)" style="flex:none;"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+                      <span style="font-size:11px; color:rgba(26,26,46,.45); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ o.payDate }}</span>
+                    </div>
+                  </div>
+                  <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                    <div style="font-size:15px; font-weight:700; color:#E94560;">{{ o.totalFmt }}</div>
+                    <button onClick="{{ o.onCycle }}" style="border:none; cursor:pointer; border-radius:50px; padding:4px 11px; font-family:Roboto,sans-serif; font-size:11px; font-weight:600; background:{{ o.badgeBg }}; color:{{ o.badgeFg }};">{{ o.statusLabel }}</button>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; border-top:1px solid #F0EEF2; margin-top:12px; padding-top:10px;">
+                  <span style="font-size:12px; color:rgba(26,26,46,.45);">Entrega</span>
+                  <button onClick="{{ o.onToggleDelivery }}" style="display:flex; align-items:center; gap:5px; border:1.4px solid {{ o.delBorder }}; background:{{ o.delBg }}; color:{{ o.delFg }}; cursor:pointer; border-radius:50px; padding:5px 12px; font-family:Roboto,sans-serif; font-size:12px; font-weight:600;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zM18 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+                    {{ o.deliveryLabel }}
+                  </button>
+                </div>
+                <!-- Historial de pagos -->
+                <sc-if value="{{ o.hasPayments }}" hint-placeholder-val="{{ false }}">
+                  <div style="border-top:1px solid #F0EEF2; margin-top:10px; padding-top:8px; display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:11px; color:rgba(26,26,46,.45);">📋 {{ o.paymentsCount }} pago(s)</span>
+                    <span style="font-size:11px; font-weight:600; color:#0f6b2e;">{{ o.lastPayFmt }}</span>
+                  </div>
+                </sc-if>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ----- PRODUCTOS ----- -->
+        <sc-if value="{{ isProductos }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:12px 16px 110px;">
+            <sc-if value="{{ hasLowStock }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#FFDAD6; border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="#8c0009"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                <span style="font-size:13px; color:#8c0009;">{{ lowStockLabel }}</span>
+              </div>
+            </sc-if>
+
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <sc-for list="{{ products }}" as="p" hint-placeholder-count="6">
+                <div style="background:#FFFFFF; border-radius:16px; padding:14px; box-shadow:0 1px 3px rgba(26,26,46,.07); display:flex; align-items:center; gap:12px;">
+                  <div style="width:48px; height:48px; border-radius:12px; background:#FFDADA; color:#5b0010; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:700; flex:none;">{{ p.avatar }}</div>
+                  <div style="flex:1; min-width:0;">
+                    <div style="font-size:15px; font-weight:600; color:#1A1A2E; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ p.name }}</div>
+                    <div style="font-size:12px; color:rgba(26,26,46,.5);">{{ p.category }}</div>
+                    <div style="display:flex; align-items:center; gap:10px; margin-top:3px;">
+                      <span style="font-size:14px; font-weight:500; color:#E94560;">{{ p.priceFmt }}</span>
+                      <span style="font-size:12px; color:{{ p.stockColor }};">{{ p.stockLabel }}</span>
+                    </div>
+                  </div>
+                  <button onClick="{{ p.onEdit }}" style="border:none; background:transparent; cursor:pointer; padding:8px; display:flex;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="#E94560"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                  </button>
+                  <button onClick="{{ p.onDelete }}" style="border:none; background:transparent; cursor:pointer; padding:8px; display:flex;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="#b3261e"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                  </button>
+                </div>
+              </sc-for>
+            </div>
+
+            <sc-if value="{{ noProducts }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:60px 16px; text-align:center; color:rgba(26,26,46,.45);">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="rgba(26,26,46,.18)"><path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z"/></svg>
+                <div style="font-size:15px; margin-top:12px;">Sin resultados</div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- ----- PUBLICACIONES ----- -->
+        <sc-if value="{{ isPublicaciones }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 16px 110px;">
+            <div style="background:#F2F2F7; border-radius:18px; padding:16px;">
+              <sc-if value="{{ mkHasImage }}" hint-placeholder-val="{{ false }}">
+                <div style="width:100%; height:230px; border-radius:14px; overflow:hidden; background:repeating-linear-gradient(135deg,#e2dfe6 0 14px,#ebe9ee 14px 28px); display:flex; align-items:center; justify-content:center; position:relative;">
+                  <span style="font-family:ui-monospace,Menlo,monospace; font-size:12px; color:#8a8794; background:rgba(255,255,255,.7); padding:5px 10px; border-radius:6px;">foto de prenda</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ mkNoImage }}" hint-placeholder-val="{{ true }}">
+                <div style="width:100%; height:180px; border-radius:14px; background:#FFFFFF; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
+                  <svg width="46" height="46" viewBox="0 0 24 24" fill="#C7C7CC"><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
+                  <span style="font-size:14px; color:#9a98a4;">Selecciona una prenda de ropa</span>
+                </div>
+              </sc-if>
+              <div style="display:flex; gap:8px; margin-top:12px;">
+                <button onClick="{{ pickCamera }}" style="flex:1; height:46px; border:1.4px solid #E94560; background:transparent; color:#E94560; border-radius:11px; cursor:pointer; font-family:Roboto,sans-serif; font-size:14px; font-weight:500; display:flex; align-items:center; justify-content:center; gap:6px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
+                  Cámara
+                </button>
+                <button onClick="{{ pickGallery }}" style="flex:1; height:46px; border:1.4px solid #E94560; background:transparent; color:#E94560; border-radius:11px; cursor:pointer; font-family:Roboto,sans-serif; font-size:14px; font-weight:500; display:flex; align-items:center; justify-content:center; gap:6px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22 16V4c0-1.1-.9-2-2-2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2zm-11-4l2.03 2.71L16 11l4 5H8l3-4zM2 6v14c0 1.1.9 2 2 2h14v-2H4V6H2z"/></svg>
+                  Galería
+                </button>
+              </div>
+            </div>
+
+            <sc-if value="{{ mkCanGenerate }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ generateCopies }}" style="width:100%; height:52px; margin-top:16px; border:none; border-radius:14px; background:#E94560; color:#fff; cursor:pointer; font-family:Roboto,sans-serif; font-size:15px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 14px rgba(233,69,96,.35); animation:tr-up .25s ease;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/></svg>
+                Generar copys con IA
+              </button>
+            </sc-if>
+
+            <sc-if value="{{ mkLoading }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:16px; background:#FFFFFF; border-radius:18px; padding:32px; display:flex; flex-direction:column; align-items:center; gap:14px; box-shadow:0 1px 3px rgba(26,26,46,.07);">
+                <div style="width:48px; height:48px; border-radius:50%; border:4px solid #FFDADA; border-top-color:#E94560; animation:tr-spin .9s linear infinite;"></div>
+                <div style="font-size:15px; font-weight:500; color:#1A1A2E;">Analizando la prenda con IA…</div>
+                <div style="font-size:12px; color:rgba(26,26,46,.5); text-align:center;">Generando copys para Instagram, TikTok y Facebook</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ mkDone }}" hint-placeholder-val="{{ false }}">
+              <div style="margin-top:18px;">
+                <div style="font-size:16px; font-weight:600; color:#1A1A2E; margin-bottom:12px;">Copys generados</div>
+                <div style="display:flex; flex-direction:column; gap:14px;">
+                  <sc-for list="{{ copies }}" as="c" hint-placeholder-count="3">
+                    <div style="background:#FFFFFF; border-radius:16px; padding:16px; box-shadow:0 1px 3px rgba(26,26,46,.08); animation:tr-up .3s ease;">
+                      <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size:22px;">{{ c.icon }}</span>
+                        <span style="font-size:16px; font-weight:700; color:#1A1A2E;">{{ c.platform }}</span>
+                      </div>
+                      <div style="font-size:15px; font-weight:600; color:#E94560; margin-top:12px;">{{ c.hook }}</div>
+                      <div style="font-size:14px; color:#33333f; line-height:1.5; margin-top:8px;">{{ c.body }}</div>
+                      <div style="font-size:13px; color:rgba(233,69,96,.8); margin-top:8px;">{{ c.tags }}</div>
+                      <div style="height:1px; background:#ECEAEF; margin:12px 0 8px;"></div>
+                      <div style="display:flex; justify-content:flex-end; gap:4px;">
+                        <button onClick="{{ c.onCopy }}" style="border:none; background:transparent; color:#E94560; cursor:pointer; font-family:Roboto,sans-serif; font-size:13px; font-weight:500; padding:8px 12px; border-radius:8px; display:flex; align-items:center; gap:5px;">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                          Copiar
+                        </button>
+                        <button onClick="{{ c.onShare }}" style="border:none; background:transparent; color:#E94560; cursor:pointer; font-family:Roboto,sans-serif; font-size:13px; font-weight:500; padding:8px 12px; border-radius:8px; display:flex; align-items:center; gap:5px;">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>
+                          Compartir
+                        </button>
+                      </div>
+                      <!-- Vista previa (plataforma) -->
+                      <div style="border-top:1px solid #ECEAEF; margin-top:8px; padding-top:8px; display:flex; align-items:center; gap:6px;">
+                        <span style="font-size:20px;">{{ c.icon }}</span>
+                        <span style="font-size:11px; color:rgba(26,26,46,.45); flex:1;">{{ c.platform }} · listo para compartir</span>
+                        <button onClick="{{ c.onShare }}" style="border:none; background:#E94560; color:#fff; cursor:pointer; border-radius:12px; padding:5px 12px; font-family:Roboto,sans-serif; font-size:11px; font-weight:600;">↑</button>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- Settings modal de redes -->
+            <sc-if value="{{ mkSettingsOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute; inset:0; background:rgba(10,9,14,.45); z-index:20; display:flex; align-items:flex-end;">
+                <div style="background:#FFFFFF; border-radius:22px 22px 0 0; padding:24px 20px; width:100%;">
+                  <div style="font-size:18px; font-weight:700; color:#1A1A2E; margin-bottom:6px;">Configuración de redes</div>
+                  <div style="font-size:12px; color:rgba(26,26,46,.5); margin-bottom:20px;">Conecta tus cuentas para compartir copys directamente</div>
+                  <div style="margin-bottom:14px;">
+                    <div style="font-size:12px; font-weight:600; color:#666; margin-bottom:6px; display:flex; align-items:center; gap:6px;">📸 Instagram</div>
+                    <input value="{{ mkIg }}" onInput="{{ onMkIg }}" placeholder="@tutienda" style="width:100%; height:46px; border:1.4px solid #D8D5DD; border-radius:10px; padding:0 14px; font-family:Roboto,sans-serif; font-size:14px; outline:none; box-sizing:border-box;" />
+                  </div>
+                  <div style="margin-bottom:14px;">
+                    <div style="font-size:12px; font-weight:600; color:#666; margin-bottom:6px; display:flex; align-items:center; gap:6px;">🎵 TikTok</div>
+                    <input value="{{ mkTk }}" onInput="{{ onMkTk }}" placeholder="@tutienda" style="width:100%; height:46px; border:1.4px solid #D8D5DD; border-radius:10px; padding:0 14px; font-family:Roboto,sans-serif; font-size:14px; outline:none; box-sizing:border-box;" />
+                  </div>
+                  <div style="margin-bottom:20px;">
+                    <div style="font-size:12px; font-weight:600; color:#666; margin-bottom:6px; display:flex; align-items:center; gap:6px;">👥 Facebook</div>
+                    <input value="{{ mkFb }}" onInput="{{ onMkFb }}" placeholder="Nombre de tu página" style="width:100%; height:46px; border:1.4px solid #D8D5DD; border-radius:10px; padding:0 14px; font-family:Roboto,sans-serif; font-size:14px; outline:none; box-sizing:border-box;" />
+                  </div>
+                  <div style="display:flex; gap:10px;">
+                    <button onClick="{{ closeMkSettings }}" style="flex:1; height:48px; border:1.4px solid #D8D5DD; background:#fff; color:#1A1A2E; cursor:pointer; border-radius:12px; font-family:Roboto,sans-serif; font-size:14px; font-weight:600;">Cancelar</button>
+                    <button onClick="{{ saveMkSettings }}" style="flex:1.4; height:48px; border:none; background:#E94560; color:#fff; cursor:pointer; border-radius:12px; font-family:Roboto,sans-serif; font-size:14px; font-weight:600;">Guardar</button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- ----- CLIENTES ----- -->
+        <sc-if value="{{ isClientes }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 16px 110px;">
+            <div style="display:flex; gap:12px; margin-bottom:16px;">
+              <div style="flex:1; background:#FFFFFF; border-radius:16px; padding:16px; box-shadow:0 1px 3px rgba(26,26,46,.07);">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="#E94560"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                <div style="font-size:12px; color:rgba(26,26,46,.55); margin-top:8px;">Total</div>
+                <div style="font-size:18px; font-weight:700; color:#1A1A2E;">{{ clientsCount }}</div>
+              </div>
+              <div style="flex:1; background:#FFF3F4; border-radius:16px; padding:16px; box-shadow:0 1px 3px rgba(26,26,46,.07);">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="#b3261e"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg>
+                <div style="font-size:12px; color:rgba(179,38,30,.7); margin-top:8px;">Pendiente de liquidar</div>
+                <div style="font-size:18px; font-weight:700; color:#b3261e;">{{ totalPendingFmt }}</div>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <sc-for list="{{ clientes }}" as="c" hint-placeholder-count="5">
+                <div style="background:{{ c.cardBg }}; border-radius:16px; box-shadow:0 1px 3px rgba(26,26,46,.07); overflow:hidden; transition:background .2s; border:1.5px solid {{ c.cardBorder }};">
+                  <button onClick="{{ c.onToggle }}" style="width:100%; border:none; background:transparent; cursor:pointer; padding:14px; display:flex; align-items:center; gap:12px; text-align:left;">
+                    <div style="width:46px; height:46px; border-radius:50%; background:#FFDADA; color:#5b0010; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:700; flex:none;">{{ c.avatar }}</div>
+                    <div style="flex:1; min-width:0;">
+                      <div style="font-size:15px; font-weight:600; color:#1A1A2E; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ c.name }}</div>
+                      <div style="font-size:12px; color:rgba(26,26,46,.5);">{{ c.countLabel }} · {{ c.spentFmt }}</div>
+                    </div>
+                    <sc-if value="{{ c.hasPending }}" hint-placeholder-val="{{ false }}">
+                      <span style="font-size:11px; font-weight:600; background:#FCEFC7; color:#7a5a00; border-radius:50px; padding:4px 10px; white-space:nowrap;">Debe {{ c.pendingFmt }}</span>
+                    </sc-if>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="#9a98a4" style="flex:none; transform:rotate({{ c.chevRot }}); transition:transform .2s;"><path d="M7 10l5 5 5-5z"/></svg>
+                  </button>
+                  <sc-if value="{{ c.expanded }}" hint-placeholder-val="{{ false }}">
+                    <div style="padding:0 14px 14px;">
+                      <div style="height:1px; background:#F0EEF2; margin-bottom:10px;"></div>
+                      <sc-if value="{{ c.hasPending }}" hint-placeholder-val="{{ false }}">
+                        <button onClick="{{ c.onAbonarCuenta }}" style="width:100%; border:none; background:#E94560; color:#fff; cursor:pointer; border-radius:12px; padding:12px; font-family:Roboto,sans-serif; font-size:14px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:7px; margin-bottom:12px;">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                          Abonar a cuenta · debe {{ c.pendingFmt }}
+                        </button>
+                      </sc-if>
+                      <div style="font-size:11px; font-weight:600; color:rgba(26,26,46,.45); letter-spacing:.4px; margin-bottom:8px;">HISTORIAL DE COMPRAS</div>
+                      <sc-for list="{{ c.orders }}" as="h" hint-placeholder-count="2">
+                        <div style="background:#FAFAFA; border-radius:12px; padding:10px; margin-bottom:6px;">
+                          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:6px; margin-bottom:4px;">
+                            <span style="font-size:13px; font-weight:600; color:#1A1A2E; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ h.productName }}</span>
+                            <span style="font-size:13px; font-weight:700; color:#E94560; flex:none;">{{ h.totalFmt }}</span>
+                          </div>
+                          <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+                            <span style="font-size:11px; color:rgba(26,26,46,.45);">{{ h.sub }} · {{ h.payDate }}</span>
+                            <span style="font-size:11px; font-weight:600; border-radius:50px; padding:2px 8px; background:{{ h.badgeBg }}; color:{{ h.badgeFg }};">{{ h.statusLabel }}</span>
+                            <span style="font-size:11px; font-weight:600; color:{{ h.delFg }};">{{ h.deliveryLabel }}</span>
+                          </div>
+                          <sc-if value="{{ h.isApartado }}" hint-placeholder-val="{{ false }}">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; background:#FFF3F4; border-radius:9px; padding:7px 10px; margin-top:6px;">
+                              <span style="font-size:11px; color:#7a5a00;">{{ h.paidFmt }} pag. · Saldo <b style="color:#b3261e;">{{ h.saldoFmt }}</b></span>
+                              <button onClick="{{ h.onAbonar }}" style="border:none; background:#E94560; color:#fff; cursor:pointer; border-radius:50px; padding:5px 12px; font-family:Roboto,sans-serif; font-size:11px; font-weight:600; white-space:nowrap; flex:none;">+ Abono</button>
+                            </div>
+                          </sc-if>
+                          <sc-if value="{{ h.hasPayments }}" hint-placeholder-val="{{ false }}">
+                            <div style="margin-top:5px; background:#F8F8FB; border-radius:7px; padding:5px 10px; display:flex; align-items:center; gap:5px;">
+                              <span style="font-size:11px; color:rgba(26,26,46,.55);">📋 {{ h.paymentsCount }} pago(s) · {{ h.lastPayFmt }}</span>
+                            </div>
+                          </sc-if>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+
+      <!-- ============ FAB ============ -->
+      <sc-if value="{{ isVentas }}" hint-placeholder-val="{{ true }}">
+        <button onClick="{{ openNewSale }}" style="position:absolute; right:16px; bottom:96px; height:56px; padding:0 20px; border:none; border-radius:18px; background:#E94560; color:#fff; cursor:pointer; font-family:Roboto,sans-serif; font-size:15px; font-weight:600; display:flex; align-items:center; gap:8px; box-shadow:0 6px 18px rgba(233,69,96,.4); z-index:6;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          Nueva venta
+        </button>
+      </sc-if>
+      <sc-if value="{{ isProductos }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ openNewProduct }}" style="position:absolute; right:16px; bottom:96px; width:60px; height:60px; border:none; border-radius:20px; background:#E94560; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 18px rgba(233,69,96,.4); z-index:6;">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        </button>
+      </sc-if>
+
+      <!-- ============ BOTTOM NAV ============ -->
+      <div style="flex:none; height:80px; background:#FFFFFF; border-top:1px solid rgba(26,26,46,.06); display:flex; align-items:flex-start; padding:12px 4px 0; z-index:6;">
+        <button onClick="{{ goVentas }}" style="flex:1; border:none; background:transparent; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="width:56px; height:32px; border-radius:16px; display:flex; align-items:center; justify-content:center; background:{{ nav.ventas.pill }}; transition:background .2s;">
+            <svg width="23" height="23" viewBox="0 0 24 24" style="color:{{ nav.ventas.icon }};" fill="currentColor"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>
+          </div>
+          <span style="font-size:11px; font-weight:{{ nav.ventas.weight }}; color:{{ nav.ventas.label }};">Ventas</span>
+        </button>
+        <button onClick="{{ goProductos }}" style="flex:1; border:none; background:transparent; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="width:56px; height:32px; border-radius:16px; display:flex; align-items:center; justify-content:center; background:{{ nav.productos.pill }}; transition:background .2s;">
+            <svg width="23" height="23" viewBox="0 0 24 24" style="color:{{ nav.productos.icon }};" fill="currentColor"><path d="M20 2H4c-1 0-2 .9-2 2v3.01c0 .72.43 1.34 1 1.69V20c0 1.1 1.1 2 2 2h14c.9 0 2-.9 2-2V8.7c.57-.35 1-.97 1-1.69V4c0-1.1-1-2-2-2zm-5 12H9v-2h6v2zm5-7H4V4h16v3z"/></svg>
+          </div>
+          <span style="font-size:11px; font-weight:{{ nav.productos.weight }}; color:{{ nav.productos.label }};">Productos</span>
+        </button>
+        <button onClick="{{ goPublicaciones }}" style="flex:1; border:none; background:transparent; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="width:56px; height:32px; border-radius:16px; display:flex; align-items:center; justify-content:center; background:{{ nav.publicaciones.pill }}; transition:background .2s;">
+            <svg width="23" height="23" viewBox="0 0 24 24" style="color:{{ nav.publicaciones.icon }};" fill="currentColor"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/></svg>
+          </div>
+          <span style="font-size:11px; font-weight:{{ nav.publicaciones.weight }}; color:{{ nav.publicaciones.label }};">Social</span>
+        </button>
+        <button onClick="{{ goClientes }}" style="flex:1; border:none; background:transparent; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
+          <div style="width:56px; height:32px; border-radius:16px; display:flex; align-items:center; justify-content:center; background:{{ nav.clientes.pill }}; transition:background .2s;">
+            <svg width="23" height="23" viewBox="0 0 24 24" style="color:{{ nav.clientes.icon }};" fill="currentColor"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+          </div>
+          <span style="font-size:11px; font-weight:{{ nav.clientes.weight }}; color:{{ nav.clientes.label }};">Clientes</span>
+        </button>
+      </div>
+
+      <!-- ============ NEW SALE DIALOG ============ -->
+      <sc-if value="{{ saleOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; inset:0; background:rgba(10,9,14,.45); display:flex; align-items:center; justify-content:center; padding:24px; z-index:20;">
+          <div style="width:100%; background:#FFFFFF; border-radius:24px; padding:22px; animation:tr-pop .2s ease; max-height:90%; overflow-y:auto;" class="tr-scroll">
+            <div style="font-size:20px; font-weight:700; color:#1A1A2E; margin-bottom:18px;">Registrar venta</div>
+
+            <div style="font-size:12px; color:rgba(26,26,46,.55); margin-bottom:6px;">Producto</div>
+            <div style="position:relative;">
+              <button onClick="{{ toggleSaleDrop }}" style="width:100%; height:52px; border:1.4px solid #C7C7CC; border-radius:12px; background:#fff; cursor:pointer; padding:0 14px; display:flex; align-items:center; justify-content:space-between; font-family:Roboto,sans-serif; font-size:15px; color:#1A1A2E;">
+                <span>{{ saleProductName }}</span>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="#6b6b78"><path d="M7 10l5 5 5-5z"/></svg>
+              </button>
+              <sc-if value="{{ saleDropOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="position:absolute; top:56px; left:0; right:0; background:#fff; border-radius:12px; box-shadow:0 8px 28px rgba(10,9,14,.22); padding:6px; z-index:5; max-height:220px; overflow-y:auto;" class="tr-scroll">
+                  <sc-for list="{{ saleProducts }}" as="sp" hint-placeholder-count="4">
+                    <button onClick="{{ sp.onPick }}" style="width:100%; text-align:left; border:none; background:transparent; cursor:pointer; padding:11px 12px; border-radius:8px; font-family:Roboto,sans-serif; font-size:14px; color:#1A1A2E; display:flex; justify-content:space-between; gap:8px;">
+                      <span>{{ sp.name }}</span>
+                      <span style="color:rgba(26,26,46,.45); font-size:13px;">{{ sp.stockTxt }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </div>
+
+            <div style="font-size:12px; color:rgba(26,26,46,.55); margin:16px 0 6px;">Cantidad</div>
+            <div style="display:flex; align-items:center; gap:14px;">
+              <button onClick="{{ saleDec }}" style="width:42px; height:42px; border:1.4px solid #C7C7CC; border-radius:11px; background:#fff; cursor:pointer; font-size:22px; color:#1A1A2E; display:flex; align-items:center; justify-content:center;">−</button>
+              <span style="font-size:18px; font-weight:600; color:#1A1A2E; min-width:24px; text-align:center;">{{ saleQty }}</span>
+              <button onClick="{{ saleInc }}" style="width:42px; height:42px; border:1.4px solid #C7C7CC; border-radius:11px; background:#fff; cursor:pointer; font-size:22px; color:#1A1A2E; display:flex; align-items:center; justify-content:center;">+</button>
+            </div>
+
+            <sc-if value="{{ saleHasSizes }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size:12px; color:rgba(26,26,46,.55); margin:16px 0 8px;">Talla</div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <sc-for list="{{ saleSizes }}" as="sz" hint-placeholder-count="4">
+                  <button onClick="{{ sz.onPick }}" style="border:1.4px solid {{ sz.border }}; background:{{ sz.bg }}; color:{{ sz.fg }}; cursor:pointer; border-radius:9px; padding:8px 16px; font-family:Roboto,sans-serif; font-size:14px; font-weight:500;">{{ sz.label }}</button>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <div style="font-size:12px; color:rgba(26,26,46,.55); margin:16px 0 6px;">Cliente</div>
+            <input value="{{ saleClient }}" onInput="{{ onSaleClient }}" placeholder="Nombre del cliente" style="width:100%; height:50px; border:1.4px solid #C7C7CC; border-radius:12px; padding:0 14px; font-family:Roboto,sans-serif; font-size:15px; color:#1A1A2E; outline:none;" />
+
+            <div style="font-size:12px; color:rgba(26,26,46,.55); margin:16px 0 8px;">Estado</div>
+            <div style="display:flex; gap:8px;">
+              <sc-for list="{{ saleStatusOptions }}" as="ss" hint-placeholder-count="2">
+                <button onClick="{{ ss.onPick }}" style="flex:1; border:1.4px solid {{ ss.border }}; background:{{ ss.bg }}; color:{{ ss.fg }}; cursor:pointer; border-radius:10px; padding:10px 6px; font-family:Roboto,sans-serif; font-size:13px; font-weight:500;">{{ ss.label }}</button>
+              </sc-for>
+            </div>
+
+            <div style="font-size:12px; color:rgba(26,26,46,.55); margin:16px 0 8px;">Forma de pago</div>
+            <div style="display:flex; gap:8px;">
+              <sc-for list="{{ paymentOptions }}" as="pm" hint-placeholder-count="3">
+                <button onClick="{{ pm.onPick }}" style="flex:1; border:1.4px solid {{ pm.border }}; background:{{ pm.bg }}; color:{{ pm.fg }}; cursor:pointer; border-radius:10px; padding:10px 6px; font-family:Roboto,sans-serif; font-size:13px; font-weight:500;">{{ pm.label }}</button>
+              </sc-for>
+            </div>
+
+            <div style="font-size:18px; font-weight:700; color:#E94560; margin-top:18px;">Total: {{ saleTotal }}</div>
+
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px;">
+              <button onClick="{{ closeNewSale }}" style="border:none; background:transparent; color:#6b6b78; cursor:pointer; font-family:Roboto,sans-serif; font-size:15px; font-weight:600; padding:10px 16px;">Cancelar</button>
+              <button onClick="{{ confirmSale }}" style="border:none; background:#E94560; color:#fff; cursor:pointer; font-family:Roboto,sans-serif; font-size:15px; font-weight:600; padding:10px 20px; border-radius:11px;">Registrar</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ PRODUCT FORM ============ -->
+      <sc-if value="{{ formOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; inset:0; background:#FAFAFA; z-index:30; display:flex; flex-direction:column; animation:tr-up .2s ease;">
+          <div style="flex:none; background:#FFFFFF; padding:8px 16px; display:flex; align-items:center; gap:8px; box-shadow:0 1px 0 rgba(26,26,46,.06);">
+            <button onClick="{{ closeForm }}" style="border:none; background:transparent; cursor:pointer; padding:8px; display:flex;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="#1A1A2E"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+            </button>
+            <span style="font-size:20px; font-weight:700; color:#1A1A2E;">{{ formTitle }}</span>
+          </div>
+          <div class="tr-scroll" style="flex:1; overflow-y:auto; padding:18px 16px 24px; display:flex; flex-direction:column; gap:16px;">
+            <div>
+              <div style="font-size:12px; color:rgba(26,26,46,.55); margin-bottom:6px;">Nombre del producto *</div>
+              <input value="{{ fName }}" onInput="{{ onFName }}" style="width:100%; height:50px; border:1.4px solid #C7C7CC; border-radius:12px; padding:0 14px; font-family:Roboto,sans-serif; font-size:15px; color:#1A1A2E; outline:none;" />
+            </div>
+            <div style="display:flex; gap:12px;">
+              <div style="flex:1;">
+                <div style="font-size:12px; color:rgba(26,26,46,.55); margin-bottom:6px;">Precio (MXN) *</div>
+                <input value="{{ fPrice }}" onInput="{{ onFPrice }}" inputmode="decimal" style="width:100%; height:50px; border:1.4px solid #C7C7CC; border-radius:12px; padding:0 14px; font-family:Roboto,sans-serif; font-size:15px; color:#1A1A2E; outline:none;" />
+              </div>
+              <div style="flex:1;">
+                <div style="font-size:12px; color:rgba(26,26,46,.55); margin-bottom:6px;">Stock</div>
+                <input value="{{ fStock }}" onInput="{{ onFStock }}" inputmode="numeric" style="width:100%; height:50px; border:1.4px solid #C7C7CC; border-radius:12px; padding:0 14px; font-family:Roboto,sans-serif; font-size:15px; color:#1A1A2E; outline:none;" />
+              </div>
+            </div>
+            <div>
+              <div style="font-size:12px; color:rgba(26,26,46,.55); margin-bottom:6px;">Categoría</div>
+              <div style="position:relative;">
+                <button onClick="{{ toggleCatDrop }}" style="width:100%; height:50px; border:1.4px solid #C7C7CC; border-radius:12px; background:#fff; cursor:pointer; padding:0 14px; display:flex; align-items:center; justify-content:space-between; font-family:Roboto,sans-serif; font-size:15px; color:#1A1A2E;">
+                  <span>{{ fCat }}</span>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="#6b6b78"><path d="M7 10l5 5 5-5z"/></svg>
+                </button>
+                <sc-if value="{{ catDropOpen }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute; top:54px; left:0; right:0; background:#fff; border-radius:12px; box-shadow:0 8px 28px rgba(10,9,14,.22); padding:6px; z-index:5; max-height:240px; overflow-y:auto;" class="tr-scroll">
+                    <sc-for list="{{ catOptions }}" as="co" hint-placeholder-count="6">
+                      <button onClick="{{ co.onPick }}" style="width:100%; text-align:left; border:none; background:transparent; cursor:pointer; padding:11px 12px; border-radius:8px; font-family:Roboto,sans-serif; font-size:14px; color:#1A1A2E;">{{ co.label }}</button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:12px; color:rgba(26,26,46,.55); margin-bottom:6px;">Descripción</div>
+              <textarea onInput="{{ onFDesc }}" style="width:100%; min-height:80px; border:1.4px solid #C7C7CC; border-radius:12px; padding:12px 14px; font-family:Roboto,sans-serif; font-size:15px; color:#1A1A2E; outline:none; resize:none;">{{ fDescRaw }}</textarea>
+            </div>
+            <div>
+              <div style="font-size:14px; font-weight:500; color:#1A1A2E; margin-bottom:8px;">Tallas disponibles</div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                <sc-for list="{{ formSizes }}" as="fs" hint-placeholder-count="6">
+                  <button onClick="{{ fs.onToggle }}" style="border:1.4px solid {{ fs.border }}; background:{{ fs.bg }}; color:{{ fs.fg }}; cursor:pointer; border-radius:9px; padding:8px 14px; font-family:Roboto,sans-serif; font-size:14px; font-weight:500;">{{ fs.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <button onClick="{{ saveProduct }}" style="width:100%; height:54px; margin-top:6px; border:none; border-radius:14px; background:{{ saveBg }}; color:#fff; cursor:pointer; font-family:Roboto,sans-serif; font-size:15px; font-weight:600; display:flex; align-items:center; justify-content:center; gap:8px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>
+              {{ saveLabel }}
+            </button>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ DELETE CONFIRM ============ -->
+      <sc-if value="{{ deleteOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; inset:0; background:rgba(10,9,14,.45); display:flex; align-items:center; justify-content:center; padding:28px; z-index:40;">
+          <div style="width:100%; background:#FFFFFF; border-radius:24px; padding:24px; animation:tr-pop .2s ease;">
+            <div style="font-size:19px; font-weight:700; color:#1A1A2E;">Eliminar producto</div>
+            <div style="font-size:14px; color:rgba(26,26,46,.65); line-height:1.5; margin-top:10px;">{{ deleteMsg }}</div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:22px;">
+              <button onClick="{{ cancelDelete }}" style="border:none; background:transparent; color:#6b6b78; cursor:pointer; font-family:Roboto,sans-serif; font-size:15px; font-weight:600; padding:10px 16px;">Cancelar</button>
+              <button onClick="{{ confirmDelete }}" style="border:none; background:transparent; color:#b3261e; cursor:pointer; font-family:Roboto,sans-serif; font-size:15px; font-weight:700; padding:10px 16px;">Eliminar</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ ABONO DIALOG ============ -->
+      <sc-if value="{{ abonoOpen }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; inset:0; background:rgba(10,9,14,.45); display:flex; align-items:center; justify-content:center; padding:24px; z-index:45;">
+          <div style="width:100%; background:#FFFFFF; border-radius:24px; padding:22px; animation:tr-pop .2s ease;">
+            <div style="font-size:20px; font-weight:700; color:#1A1A2E;">{{ abonoTitle }}</div>
+            <div style="font-size:13px; color:rgba(26,26,46,.55); margin-top:3px;">{{ abonoSubtitle }}</div>
+            <div style="display:flex; align-items:baseline; gap:8px; background:#FFF3F4; border-radius:14px; padding:14px 16px; margin-top:16px;">
+              <span style="font-size:13px; color:#b3261e;">Saldo pendiente</span>
+              <span style="font-size:22px; font-weight:700; color:#b3261e; margin-left:auto;">{{ abonoSaldoFmt }}</span>
+            </div>
+            <div style="font-size:12px; color:rgba(26,26,46,.55); margin:18px 0 6px;">Monto del abono (MXN)</div>
+            <input value="{{ abonoAmount }}" onInput="{{ onAbonoAmount }}" inputmode="decimal" placeholder="0.00" style="width:100%; height:54px; border:1.4px solid #C7C7CC; border-radius:12px; padding:0 14px; font-family:Roboto,sans-serif; font-size:20px; font-weight:600; color:#1A1A2E; outline:none; box-sizing:border-box;" />
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;">
+              <sc-for list="{{ abonoPresets }}" as="ap" hint-placeholder-count="3">
+                <button onClick="{{ ap.onPick }}" style="border:1.4px solid #C7C7CC; background:#fff; color:#1A1A2E; cursor:pointer; border-radius:50px; padding:8px 16px; font-family:Roboto,sans-serif; font-size:13px; font-weight:500;">{{ ap.label }}</button>
+              </sc-for>
+              <button onClick="{{ onLiquidar }}" style="border:1.4px solid #E94560; background:#FFDADA; color:#5b0010; cursor:pointer; border-radius:50px; padding:8px 16px; font-family:Roboto,sans-serif; font-size:13px; font-weight:600;">Liquidar todo</button>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:22px;">
+              <button onClick="{{ closeAbono }}" style="flex:1; height:50px; border:1.4px solid #C7C7CC; background:#fff; color:#1A1A2E; cursor:pointer; border-radius:14px; font-family:Roboto,sans-serif; font-size:15px; font-weight:600;">Cancelar</button>
+              <button onClick="{{ confirmAbono }}" style="flex:1.4; height:50px; border:none; background:{{ abonoBg }}; color:#fff; cursor:pointer; border-radius:14px; font-family:Roboto,sans-serif; font-size:15px; font-weight:600;">Registrar abono</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ TOAST ============ -->
+      <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute; left:16px; right:16px; bottom:92px; background:#1A1A2E; color:#fff; border-radius:12px; padding:14px 16px; font-size:14px; z-index:50; box-shadow:0 8px 24px rgba(0,0,0,.3); animation:tr-up .25s ease;">{{ toast }}</div>
+      </sc-if>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:480,&quot;height&quot;:960}}">
+class Component extends DCLogic {
+  state = {
+    tab: 'ventas',
+    products: [
+      { id:'p1', name:'Camisa Lino Blanca', price:549, category:'Camisas', description:'Camisa de lino 100% natural, fresca y ligera.', sizes:['S','M','L','XL'], stock:12, imageUrl:'' },
+      { id:'p2', name:'Pantalón Mezclilla Slim', price:789, category:'Pantalones', description:'Mezclilla stretch corte slim.', sizes:['30','32','34','36'], stock:4, imageUrl:'' },
+      { id:'p3', name:'Blusa Floral Verano', price:399, category:'Blusas', description:'Estampado floral, tela fresca.', sizes:['XS','S','M','L'], stock:18, imageUrl:'' },
+      { id:'p4', name:'Vestido Negro Elegante', price:1290, category:'Vestidos', description:'Corte favorecedor para ocasiones especiales.', sizes:['S','M','L'], stock:6, imageUrl:'' },
+      { id:'p5', name:'Chamarra Denim', price:1150, category:'Chamarras', description:'Denim resistente, estilo clásico.', sizes:['M','L','XL'], stock:3, imageUrl:'' },
+      { id:'p6', name:'Falda Plisada Beige', price:459, category:'Faldas', description:'Falda plisada midi.', sizes:['XS','S','M'], stock:9, imageUrl:'' },
+      { id:'p7', name:'Camisa Cuadros Casual', price:599, category:'Camisas', description:'Camisa de cuadros algodón.', sizes:['S','M','L','XL'], stock:2, imageUrl:'' },
+      { id:'p8', name:'Gorra Logo', price:249, category:'Accesorios', description:'Gorra ajustable bordada.', sizes:['Única'], stock:25, imageUrl:'' },
+    ],
+    orders: [
+      { id:'o1', productName:'Vestido Negro Elegante', qty:1, size:'M', total:1290, paid:1290, status:'PAGADO', bucket:'today', timeLabel:'Hoy · 11:24', client:'María González', payment:'Tarjeta', delivered:true,
+        payments:[{amount:1290, method:'Tarjeta', date:'Hoy · 11:24', concept:'Pago completo'}] },
+      { id:'o2', productName:'Camisa Lino Blanca', qty:2, size:'L', total:1098, paid:1098, status:'PAGADO', bucket:'today', timeLabel:'Hoy · 10:02', client:'Juan Pérez', payment:'Efectivo', delivered:true,
+        payments:[{amount:1098, method:'Efectivo', date:'Hoy · 10:02', concept:'Pago completo'}] },
+      { id:'o3', productName:'Pantalón Mezclilla Slim', qty:1, size:'32', total:789, paid:300, status:'APARTADO', bucket:'today', timeLabel:'Hoy · 09:15', client:'Lucía Ramírez', payment:'Transferencia', delivered:false,
+        payments:[{amount:300, method:'Transferencia', date:'Hoy · 09:15', concept:'Anticipo'}] },
+      { id:'o4', productName:'Blusa Floral Verano', qty:3, size:'M', total:1197, paid:1197, status:'PAGADO', bucket:'week', timeLabel:'Ayer · 18:40', client:'Ana Torres', payment:'Efectivo', delivered:true,
+        payments:[{amount:800, method:'Efectivo', date:'Lun · 10:00', concept:'Anticipo'},{amount:397, method:'Efectivo', date:'Ayer · 18:40', concept:'Liquidación'}] },
+      { id:'o5', productName:'Chamarra Denim', qty:1, size:'L', total:1150, paid:0, status:'CANCELLED', bucket:'week', timeLabel:'Lun · 14:10', client:'Carlos Méndez', payment:'Tarjeta', delivered:false,
+        payments:[] },
+      { id:'o6', productName:'Falda Plisada Beige', qty:2, size:'S', total:918, paid:918, status:'PAGADO', bucket:'week', timeLabel:'Dom · 12:30', client:'Sofía Herrera', payment:'Efectivo', delivered:false,
+        payments:[{amount:918, method:'Efectivo', date:'Dom · 12:30', concept:'Pago completo'}] },
+      { id:'o7', productName:'Camisa Cuadros Casual', qty:1, size:'M', total:599, paid:0, status:'APARTADO', bucket:'week', timeLabel:'Sáb · 16:20', client:'María González', payment:'Efectivo', delivered:false,
+        payments:[] },
+    ],
+    search: '',
+    saleOpen: false, saleProductId: null, saleQty: 1, saleSize: '', saleDropOpen: false, saleClient: '', salePayment: 'Efectivo', saleStatus: 'PAGADO',
+    expandedClient: null,
+    ventasView: 'seguimiento',
+    expandedOrderHistory: null,
+    abonoOpen:false, abonoClient:'', abonoOrderId:null, abonoProductName:'', abonoSaldo:0, abonoAmount:'',
+    formOpen: false, formId: null,
+    fName:'', fPrice:'', fStock:'0', fCat:'Camisas', fDesc:'', fImg:'', fSizes:[], catDropOpen:false,
+    deleteId: null,
+    mkStep: 'idle', mkSettingsOpen:false, mkIg:'@mitienda', mkTk:'@mitienda_ropa', mkFb:'Mi Tienda Online', mkPreviewId:null,
+    toast: null,
+  };
+
+  PAYMENTS = ['Efectivo','Tarjeta','Transferencia'];
+  CATEGORIES = ['Camisas','Pantalones','Blusas','Vestidos','Faldas','Chamarras','Accesorios','Otro'];
+  PRESET_SIZES = ['XS','S','M','L','XL','XXL','28','30','32','34','36','38'];
+
+  fmt(n){ return new Intl.NumberFormat('es-MX',{ style:'currency', currency:'MXN', minimumFractionDigits:2 }).format(n||0); }
+
+  showToast(msg){ this.setState({ toast: msg }); clearTimeout(this._t); this._t = setTimeout(()=>this.setState({ toast:null }), 2400); }
+
+  // ── Nav ──
+  go(tab){ this.setState({ tab, saleDropOpen:false, catDropOpen:false }); }
+
+  // ── Orders ──
+  cycleStatus(id){
+    const order = ['APARTADO','PAGADO','CANCELLED'];
+    this.setState(s=>({ orders: s.orders.map(o=>{
+      if(o.id!==id) return o;
+      const i = order.indexOf(o.status);
+      return { ...o, status: order[(i+1)%order.length] };
+    }) }));
+  }
+
+  // ── New sale ──
+  openNewSale(){
+    const first = this.state.products[0];
+    this.setState({ saleOpen:true, saleProductId: first?first.id:null, saleQty:1, saleSize: first?(first.sizes[0]||''):'', saleDropOpen:false, saleClient:'', salePayment:'Efectivo', saleStatus:'PAGADO' });
+  }
+  closeNewSale(){ this.setState({ saleOpen:false, saleDropOpen:false }); }
+  toggleDelivery(id){ this.setState(s=>({ orders: s.orders.map(o=> o.id===id ? { ...o, delivered: !o.delivered } : o) })); }
+
+  // ── Abonos ──
+  openAbono(clientName, orderId){
+    if(orderId){
+      const o = this.state.orders.find(x=>x.id===orderId);
+      this.setState({ abonoOpen:true, abonoClient:clientName, abonoOrderId:orderId, abonoProductName:(o?o.productName:''), abonoSaldo:(o?o.total-(o.paid||0):0), abonoAmount:'' });
+    } else {
+      const saldo = this.state.orders.filter(o=>o.client===clientName && o.status==='APARTADO').reduce((a,o)=>a+(o.total-(o.paid||0)),0);
+      this.setState({ abonoOpen:true, abonoClient:clientName, abonoOrderId:null, abonoProductName:'', abonoSaldo:saldo, abonoAmount:'' });
+    }
+  }
+  applyAbono(){
+    const amt = parseFloat(this.state.abonoAmount);
+    if(isNaN(amt) || amt<=0) return;
+    const { abonoOrderId, abonoClient } = this.state;
+    let remaining = amt;
+    const now = new Date(); const ts2 = now.getHours()+':'+String(now.getMinutes()).padStart(2,'0');
+    const orders = this.state.orders.map(o=>({ ...o, payments:[...(o.payments||[])] }));
+    const apply = (o)=>{
+      const saldo = o.total - (o.paid||0);
+      const pay = Math.min(saldo, remaining);
+      o.paid = (o.paid||0) + pay; remaining -= pay;
+      if(o.paid >= o.total){ o.status='PAGADO'; o.paid=o.total; }
+      o.payments.push({ amount:pay, method:'Efectivo', date:'Hoy · '+ts2, concept:'Abono' });
+    };
+    if(abonoOrderId){
+      const o = orders.find(x=>x.id===abonoOrderId);
+      if(o && o.status==='APARTADO') apply(o);
+    } else {
+      const targets = orders.filter(o=>o.client===abonoClient && o.status==='APARTADO').reverse();
+      for(const o of targets){ if(remaining<=0) break; apply(o); }
+    }
+    const applied = amt - Math.max(0, remaining);
+    this.setState({ orders, abonoOpen:false, abonoAmount:'' });
+    this.showToast('Abono registrado — '+this.fmt(applied));
+  }
+  pickSaleProduct(id){
+    const p = this.state.products.find(x=>x.id===id);
+    this.setState({ saleProductId:id, saleSize: p?(p.sizes[0]||''):'', saleDropOpen:false });
+  }
+  confirmSale(){
+    const p = this.state.products.find(x=>x.id===this.state.saleProductId);
+    if(!p) return;
+    const qty = this.state.saleQty;
+    const total = p.price*qty;
+    const now2 = new Date(); const ts = now2.getHours()+':'+String(now2.getMinutes()).padStart(2,'0');
+    const initPays = this.state.saleStatus==='PAGADO' ? [{ amount:total, method:this.state.salePayment, date:'Hoy · '+ts, concept:'Pago completo' }] : [];
+    const order = { id:'o'+Date.now(), productName:p.name, qty, size:this.state.saleSize, total, paid: this.state.saleStatus==='PAGADO' ? total : 0, status:this.state.saleStatus, bucket:'today', timeLabel:'Hoy · '+ts, client:(this.state.saleClient.trim()||'Mostrador'), payment:this.state.salePayment, delivered:false, payments:initPays };
+    this.setState(s=>({
+      orders: [order, ...s.orders],
+      products: s.products.map(x=> x.id===p.id ? { ...x, stock: Math.max(0, x.stock-qty) } : x),
+      saleOpen:false, saleDropOpen:false,
+    }));
+    this.showToast('Venta registrada — '+this.fmt(p.price*qty));
+  }
+
+  // ── Product form ──
+  openForm(id){
+    const p = id ? this.state.products.find(x=>x.id===id) : null;
+    this.setState({
+      formOpen:true, formId: id||null, catDropOpen:false,
+      fName: p?p.name:'', fPrice: p?String(p.price):'', fStock: p?String(p.stock):'0',
+      fCat: p?p.category:'Camisas', fDesc: p?p.description:'', fImg: p?p.imageUrl:'', fSizes: p?[...p.sizes]:[],
+    });
+  }
+  closeForm(){ this.setState({ formOpen:false, catDropOpen:false }); }
+  saveProduct(){
+    const name = this.state.fName.trim();
+    const price = parseFloat(this.state.fPrice);
+    if(!name || isNaN(price)) return;
+    const data = {
+      name, price, category:this.state.fCat, description:this.state.fDesc.trim(),
+      sizes:[...this.state.fSizes], stock: parseInt(this.state.fStock,10)||0, imageUrl:this.state.fImg.trim(),
+    };
+    this.setState(s=>{
+      if(s.formId){
+        return { products: s.products.map(p=> p.id===s.formId ? { ...p, ...data } : p), formOpen:false };
+      }
+      return { products: [...s.products, { id:'p'+Date.now(), ...data }], formOpen:false };
+    });
+    this.showToast(this.state.formId ? 'Cambios guardados' : 'Producto creado');
+  }
+
+  // ── Delete ──
+  confirmDelete(){
+    const id = this.state.deleteId;
+    this.setState(s=>({ products: s.products.filter(p=>p.id!==id), deleteId:null }));
+    this.showToast('Producto eliminado');
+  }
+
+  // ── Marketing ──
+  generateCopies(){
+    this.setState({ mkStep:'loading' });
+    clearTimeout(this._m);
+    this._m = setTimeout(()=>this.setState({ mkStep:'done' }), 1700);
+  }
+
+  MK_COPIES = [
+    { platform:'Instagram', icon:'📸',
+      hook:'Tu look de noche empieza aquí ✨',
+      body:'Este vestido negro es ese básico que nunca falla: cae perfecto, estiliza y combina con todo. 🖤 Tallas S a L disponibles… pero vuelan rápido. Pásate hoy o escríbenos por DM 💬',
+      tags:'#ModaMujer #VestidoNegro #OOTD #TiendaRopa #LookDeNoche' },
+    { platform:'TikTok', icon:'🎵',
+      hook:'POV: encontraste EL vestido 🔥',
+      body:'Negro, elegante y a un precio que no esperabas 😱 Guárdalo antes de que se acabe tu talla. Apártalo desde el link en bio 🛍️✨',
+      tags:'#fyp #parati #moda #outfitinspo #vestidonegro' },
+    { platform:'Facebook', icon:'👥',
+      hook:'Elegancia atemporal para cualquier ocasión',
+      body:'Presentamos el Vestido Negro Elegante: confección de calidad, corte favorecedor y la versatilidad que tu clóset necesita. Ideal para una cena o una salida especial. Visítanos y pruébatelo sin compromiso 🛍️',
+      tags:'#TiendaRopa #ModaMexicana #NuevaColección' },
+  ];
+
+  renderVals(){
+    const s = this.state;
+    const accent = '#E94560';
+
+    // products view
+    const productsVm = s.products.map(p=>{
+      const isLow = p.stock<=5;
+      return { ...p,
+        priceFmt:this.fmt(p.price), isLow,
+        avatar:(p.name.trim()[0]||'?').toUpperCase(),
+        stockLabel:'Stock: '+p.stock,
+        stockColor: isLow ? '#b3261e' : 'rgba(26,26,46,.55)',
+        onEdit:()=>this.openForm(p.id),
+        onDelete:()=>this.setState({ deleteId:p.id }),
+      };
+    });
+    const q = s.search.trim().toLowerCase();
+    const filtered = q ? productsVm.filter(p=> p.name.toLowerCase().includes(q) || p.category.toLowerCase().includes(q)) : productsVm;
+    const lowCount = productsVm.filter(p=>p.isLow).length;
+
+    // orders view
+    const STAT = {
+      PAGADO:['#D7F3DD','#0f6b2e','Pagado'],
+      APARTADO:['#FCEFC7','#7a5a00','Apartado'],
+      CANCELLED:['#FFDAD6','#8c0009','Cancelado'],
+    };
+    const PAY_ICON = { Efectivo:'💵', Tarjeta:'💳', Transferencia:'🏦', SPEI:'🏦', OXXO:'🏪' };
+    const ordersVm = s.orders.map(o=>{
+      const [bg,fg,label] = STAT[o.status]||['#eee','#444','—'];
+      const histOpen = s.expandedOrderHistory === o.id;
+      const pays = o.payments||[];
+      return { ...o, totalFmt:this.fmt(o.total), sub:o.qty+'x — Talla '+o.size, badgeBg:bg, badgeFg:fg, statusLabel:label,
+        avatar:(o.productName.trim()[0]||'?').toUpperCase(), payDate:o.payment+' · '+o.timeLabel,
+        deliveryLabel: o.delivered ? 'Entregado' : 'Por entregar',
+        delBg: o.delivered ? '#D7F3DD' : o.status==='PAGADO' ? '#EBF3FF' : o.status==='APARTADO' ? '#FFF8E1' : '#F5F5F5',
+        delFg: o.delivered ? '#0f6b2e' : o.status==='PAGADO' ? '#1565C0' : o.status==='APARTADO' ? '#E65100' : '#9E9E9E',
+        delBorder: o.delivered ? '#D7F3DD' : o.status==='PAGADO' ? '#BBDEFB' : o.status==='APARTADO' ? '#FFE082' : '#E0E0E0',
+        isApartado: o.status==='APARTADO', saldo: o.total-(o.paid||0), paidFmt:this.fmt(o.paid||0), saldoFmt:this.fmt(o.total-(o.paid||0)),
+        onAbonar:()=>this.openAbono(o.client, o.id),
+        onCycle:()=>this.cycleStatus(o.id), onToggleDelivery:()=>this.toggleDelivery(o.id),
+        hasPayments: pays.length>0, paymentsCount: pays.length,
+        lastPayFmt: pays.length>0 ? this.fmt(pays[pays.length-1].amount) : '',
+        historyOpen: histOpen, historyChevRot: histOpen?'180deg':'0deg',
+        onToggleHistory:()=>this.setState(st=>({ expandedOrderHistory: st.expandedOrderHistory===o.id?null:o.id })),
+        paymentHistory: pays.map(p=>({ ...p, amountFmt:this.fmt(p.amount), icon:PAY_ICON[p.method]||'💰' })),
+      };
+    });
+    // Split seguimiento / completados
+    const isSeg = o=> !(o.status==='PAGADO' && o.delivered);
+    const seguimientoVm = ordersVm.filter(isSeg);
+    const completadosVm  = ordersVm.filter(o=>!isSeg(o));
+    const isSeguimiento = s.ventasView==='seguimiento';
+    const todayRevenue = this.fmt(s.orders.filter(o=>o.bucket==='today'&&o.status==='PAGADO').reduce((a,o)=>a+o.total,0));
+    const todayCount = s.orders.filter(o=>o.bucket==='today').length;
+    const weekRevenue = this.fmt(s.orders.filter(o=>o.status==='PAGADO').reduce((a,o)=>a+o.total,0));
+
+    // clients (grouped from orders)
+    const groups = {};
+    ordersVm.forEach(o=>{ (groups[o.client] = groups[o.client] || []).push(o); });
+    const clientsVm = Object.keys(groups).map(name=>{
+      const list = groups[name];
+      const pending = list.filter(o=>o.status==='APARTADO').reduce((a,o)=>a+o.saldo,0);
+      const spent = list.filter(o=>o.status!=='CANCELLED').reduce((a,o)=>a+o.total,0);
+      const toDeliver = list.filter(o=>o.status!=='CANCELLED'&&!o.delivered).length;
+      return { name, avatar:(name.trim()[0]||'?').toUpperCase(),
+        countLabel: list.length+(list.length===1?' compra':' compras'),
+        spentFmt:this.fmt(spent), pending, pendingFmt:this.fmt(pending), hasPending: pending>0,
+        toDeliver, hasToDeliver: toDeliver>0, toDeliverLabel: toDeliver+(toDeliver===1?' por entregar':' por entregar'),
+        cardBg: s.expandedClient===name ? '#FFF0F5' : '#FFFFFF',
+        cardBorder: s.expandedClient===name ? '#F5C0C8' : 'transparent',
+        orders:list, expanded: s.expandedClient===name, chevRot: s.expandedClient===name?'180deg':'0deg',
+        onToggle:()=>this.setState(st=>({ expandedClient: st.expandedClient===name?null:name })),
+        onAbonarCuenta:()=>this.openAbono(name, null) };
+    }).sort((a,b)=> (b.pending - a.pending) || a.name.localeCompare(b.name));
+    const totalPending = ordersVm.filter(o=>o.status==='APARTADO').reduce((a,o)=>a+o.saldo,0);
+
+    // nav styling
+    const onP = (t)=> s.tab===t;
+    const navItem = (t)=>({
+      pill: onP(t) ? '#FFDADA' : 'transparent',
+      icon: onP(t) ? '#5b0010' : '#6b6b78',
+      label: onP(t) ? '#1A1A2E' : '#6b6b78',
+      weight: onP(t) ? 600 : 500,
+    });
+
+    // new sale
+    const saleProduct = s.products.find(p=>p.id===s.saleProductId)||null;
+    const saleProducts = s.products.map(p=>({ name:p.name, stockTxt:'Stock: '+p.stock, onPick:()=>this.pickSaleProduct(p.id) }));
+    const saleSizes = (saleProduct?saleProduct.sizes:[]).map(sz=>({
+      label:sz, selected: sz===s.saleSize,
+      bg: sz===s.saleSize ? '#FFDADA':'#fff', fg: sz===s.saleSize ? '#5b0010':'#1A1A2E', border: sz===s.saleSize ? '#E94560':'#C7C7CC',
+      onPick:()=>this.setState({ saleSize:sz }),
+    }));
+    const saleTotal = this.fmt(saleProduct ? saleProduct.price*s.saleQty : 0);
+
+    // form
+    const formSizes = this.PRESET_SIZES.map(sz=>{
+      const sel = s.fSizes.includes(sz);
+      return { label:sz, bg: sel?'#FFDADA':'#fff', fg: sel?'#5b0010':'#1A1A2E', border: sel?'#E94560':'#C7C7CC',
+        onToggle:()=>this.setState(st=>({ fSizes: st.fSizes.includes(sz) ? st.fSizes.filter(x=>x!==sz) : [...st.fSizes, sz] })) };
+    });
+    const catOptions = this.CATEGORIES.map(c=>({ label:c, onPick:()=>this.setState({ fCat:c, catDropOpen:false }) }));
+    const formValid = this.state.fName.trim() && !isNaN(parseFloat(this.state.fPrice));
+
+    const deleteProd = s.products.find(p=>p.id===s.deleteId);
+    const abonoAmtNum = parseFloat(s.abonoAmount);
+    const abonoValid = !isNaN(abonoAmtNum) && abonoAmtNum>0;
+
+    return {
+      // tabs
+      isVentas: s.tab==='ventas', isProductos: s.tab==='productos', isPublicaciones: s.tab==='publicaciones', isClientes: s.tab==='clientes',
+      goVentas:()=>this.go('ventas'), goProductos:()=>this.go('productos'), goPublicaciones:()=>this.go('publicaciones'), goClientes:()=>this.go('clientes'),
+      nav: { ventas:navItem('ventas'), productos:navItem('productos'), publicaciones:navItem('publicaciones'), clientes:navItem('clientes') },
+
+      // clientes
+      clientes: clientsVm, clientsCount: clientsVm.length+(clientsVm.length===1?' cliente':' clientes'),
+      totalPendingFmt: this.fmt(totalPending), hasTotalPending: totalPending>0,
+
+      // abonos
+      abonoOpen: s.abonoOpen,
+      abonoTitle: s.abonoOrderId ? 'Registrar abono' : 'Abono a cuenta',
+      abonoSubtitle: s.abonoOrderId ? s.abonoProductName : ('Cuenta de '+s.abonoClient),
+      abonoSaldoFmt: this.fmt(s.abonoSaldo),
+      abonoAmount: s.abonoAmount,
+      onAbonoAmount:(e)=>this.setState({ abonoAmount: e.target.value.replace(/[^0-9.]/g,'') }),
+      abonoPresets: [100,200,500].filter(v=>v < s.abonoSaldo).map(v=>({ label:'$'+v, onPick:()=>this.setState({ abonoAmount:String(v) }) })),
+      onLiquidar:()=>this.setState({ abonoAmount: String(s.abonoSaldo) }),
+      abonoValid, abonoBg: abonoValid ? accent : '#E9A8B4',
+      closeAbono:()=>this.setState({ abonoOpen:false }),
+      confirmAbono:()=>this.applyAbono(),
+
+      // ventas — sub-tabs
+      ventasView: s.ventasView,
+      onVentasSeg: ()=>this.setState({ ventasView:'seguimiento', expandedOrderHistory:null }),
+      onVentasComp: ()=>this.setState({ ventasView:'completados', expandedOrderHistory:null }),
+      ventasSegBg: isSeguimiento ? '#E94560' : '#F0EEF2',
+      ventasSegFg: isSeguimiento ? '#fff' : 'rgba(26,26,46,.55)',
+      ventasCompBg: !isSeguimiento ? '#1A1A2E' : '#F0EEF2',
+      ventasCompFg: !isSeguimiento ? '#fff' : 'rgba(26,26,46,.55)',
+      seguimientoLabel: seguimientoVm.length>0 ? '('+seguimientoVm.length+')' : '',
+      completadosLabel: completadosVm.length>0 ? '('+completadosVm.length+')' : '',
+      orders: isSeguimiento ? seguimientoVm : completadosVm,
+      hasOrders: (isSeguimiento ? seguimientoVm : completadosVm).length>0,
+      todayRevenue, todayCount, weekRevenue,
+      openNewSale:()=>this.openNewSale(),
+
+      // productos
+      products: filtered, noProducts: filtered.length===0,
+      search: s.search, hasSearch: s.search.length>0,
+      onSearch:(e)=>this.setState({ search:e.target.value }),
+      clearSearch:()=>this.setState({ search:'' }),
+      hasLowStock: lowCount>0,
+      lowStockLabel: lowCount+(lowCount===1?' producto':' productos')+' con stock bajo (≤ 5 unidades)',
+      openNewProduct:()=>this.openForm(null),
+
+      // new sale dialog
+      saleOpen: s.saleOpen, saleDropOpen: s.saleDropOpen,
+      saleProductName: saleProduct ? saleProduct.name : 'Selecciona un producto',
+      saleProducts, saleSizes, saleHasSizes: saleSizes.length>0, saleQty: s.saleQty, saleTotal,
+      saleClient: s.saleClient, salePayment: s.salePayment,
+      onSaleClient:(e)=>this.setState({ saleClient:e.target.value }),
+      saleStatusOptions: [['APARTADO','Apartado'],['PAGADO','Pagado']].map(([v,l])=>({
+        label:l, bg: v===s.saleStatus ? '#FFDADA':'#fff', fg: v===s.saleStatus ? '#5b0010':'#1A1A2E', border: v===s.saleStatus ? '#E94560':'#C7C7CC',
+        onPick:()=>this.setState({ saleStatus:v }),
+      })),
+      paymentOptions: this.PAYMENTS.map(pm=>({
+        label:pm, selected: pm===s.salePayment,
+        bg: pm===s.salePayment ? '#FFDADA':'#fff', fg: pm===s.salePayment ? '#5b0010':'#1A1A2E', border: pm===s.salePayment ? '#E94560':'#C7C7CC',
+        onPick:()=>this.setState({ salePayment:pm }),
+      })),
+      toggleSaleDrop:()=>this.setState(st=>({ saleDropOpen:!st.saleDropOpen })),
+      saleInc:()=>this.setState(st=>({ saleQty: st.saleQty+1 })),
+      saleDec:()=>this.setState(st=>({ saleQty: Math.max(1, st.saleQty-1) })),
+      closeNewSale:()=>this.closeNewSale(), confirmSale:()=>this.confirmSale(),
+
+      // form
+      formOpen: s.formOpen, formTitle: s.formId ? 'Editar producto' : 'Nuevo producto',
+      fName: s.fName, fPrice: s.fPrice, fStock: s.fStock, fCat: s.fCat, fDescRaw: s.fDesc,
+      onFName:(e)=>this.setState({ fName:e.target.value }),
+      onFPrice:(e)=>this.setState({ fPrice:e.target.value }),
+      onFStock:(e)=>this.setState({ fStock:e.target.value.replace(/[^0-9]/g,'') }),
+      onFDesc:(e)=>this.setState({ fDesc:e.target.value }),
+      catDropOpen: s.catDropOpen, catOptions, toggleCatDrop:()=>this.setState(st=>({ catDropOpen:!st.catDropOpen })),
+      formSizes,
+      saveProduct:()=>this.saveProduct(), closeForm:()=>this.closeForm(),
+      saveLabel: s.formId ? 'Guardar cambios' : 'Crear producto',
+      saveBg: formValid ? accent : '#E9A8B4',
+
+      // delete
+      deleteOpen: !!s.deleteId,
+      deleteMsg: deleteProd ? '¿Eliminar "'+deleteProd.name+'"? Esta acción no se puede deshacer.' : '',
+      cancelDelete:()=>this.setState({ deleteId:null }), confirmDelete:()=>this.confirmDelete(),
+
+      // marketing
+      mkNoImage: s.mkStep==='idle',
+      mkHasImage: s.mkStep!=='idle',
+      mkCanGenerate: s.mkStep==='image',
+      mkLoading: s.mkStep==='loading',
+      mkDone: s.mkStep==='done',
+      pickCamera:()=>this.setState({ mkStep:'image' }),
+      pickGallery:()=>this.setState({ mkStep:'image' }),
+      generateCopies:()=>this.generateCopies(),
+      copies: this.MK_COPIES.map(c=>({
+        ...c,
+        onCopy:()=>this.showToast('Copy de '+c.platform+' copiado'),
+        onShare:()=>this.showToast('Compartiendo copy de '+c.platform+'…'),
+        previewOpen: s.mkPreviewId === c.platform,
+        previewChev: s.mkPreviewId === c.platform ? '180deg' : '0deg',
+        onTogglePreview: ()=>this.setState(st=>({ mkPreviewId: st.mkPreviewId===c.platform?null:c.platform })),
+        previewBg: c.platform==='TikTok' ? '#010101' : '#FFFFFF',
+        previewFg: c.platform==='TikTok' ? '#fff' : '#1A1A2E',
+        previewFgMuted: c.platform==='TikTok' ? 'rgba(255,255,255,.6)' : 'rgba(26,26,46,.5)',
+      })),
+      mkSettingsOpen: s.mkSettingsOpen,
+      openMkSettings: ()=>this.setState({ mkSettingsOpen:true }),
+      closeMkSettings: ()=>this.setState({ mkSettingsOpen:false }),
+      mkIg: s.mkIg||'@mitienda',
+      mkTk: s.mkTk||'@mitienda_ropa',
+      mkFb: s.mkFb||'Mi Tienda Online',
+      onMkIg: (e)=>this.setState({ mkIg: e.target.value }),
+      onMkTk: (e)=>this.setState({ mkTk: e.target.value }),
+      onMkFb: (e)=>this.setState({ mkFb: e.target.value }),
+      saveMkSettings: ()=>{ this.setState({ mkSettingsOpen:false }); this.showToast('Configuración guardada ✓'); },
+      mkHandle: s.mkPreviewId==='TikTok' ? (s.mkTk||'@mitienda_ropa') : s.mkPreviewId==='Facebook' ? (s.mkFb||'Mi Tienda Online') : (s.mkIg||'@mitienda'),
+
+      // toast
+      hasToast: !!s.toast, toast: s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>

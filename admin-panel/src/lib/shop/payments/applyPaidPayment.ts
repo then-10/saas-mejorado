@@ -71,7 +71,7 @@ export async function applyPaidPayment(paymentId: string): Promise<void> {
  * y aplica el pago. Para webhooks.
  */
 export async function applyPaidPaymentByExternalId(externalId: string): Promise<void> {
-  const payment = await prisma.payment.findUnique({ where: { externalId } });
+  const payment = await prisma.payment.findFirst({ where: { externalId } });
   if (!payment) return;
   await applyPaidPayment(payment.id);
 }

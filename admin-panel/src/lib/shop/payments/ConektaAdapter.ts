@@ -188,7 +188,7 @@ export class ConektaAdapter implements PaymentProvider {
     return computed === signature;
   }
 
-  normalizeWebhookEvent(body: any) {
+  normalizeWebhookEvent(body: any): { externalId: string; status: "paid" | "failed" | "expired"; amount: number } | null {
     if (body.type === "order.paid") {
       return {
         externalId: body.data.id,

@@ -128,12 +128,12 @@ export class MercadoPagoAdapter implements PaymentProvider {
     const signature = req.headers["x-signature"] || req.headers["x-mp-signature"];
     if (!signature) return false;
 
-    const parts = signature.split(",").map((p) => p.trim());
+    const parts = signature.split(",").map((p: string) => p.trim());
     const ts = parts
-      .find((p) => p.startsWith("ts="))
+      .find((p: string) => p.startsWith("ts="))
       ?.replace("ts=", "");
     const hash = parts
-      .find((p) => p.startsWith("v1="))
+      .find((p: string) => p.startsWith("v1="))
       ?.replace("v1=", "");
 
     if (!ts || !hash) return false;
@@ -149,7 +149,7 @@ export class MercadoPagoAdapter implements PaymentProvider {
     return computed === hash;
   }
 
-  normalizeWebhookEvent(body: any) {
+  normalizeWebhookEvent(body: any): { externalId: string; status: "paid" | "failed" | "expired"; amount: number } | null {
     if (body.type === "payment") {
       return {
         externalId: body.data.id.toString(),

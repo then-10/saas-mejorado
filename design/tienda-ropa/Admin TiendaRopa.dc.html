@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin TiendaRopa</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; background: #f5f5f5; }
+    @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .6; } }
+    @keyframes scanline { 0%,100% { top:20%; } 50% { top:75%; } }
+    @keyframes fadeup { from { transform:translateY(12px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+  </style>
+</helmet>
+
+<div style="display:flex; flex-direction:column; min-height:100vh; background:#f8f8fa;">
+  <!-- TOP NAV -->
+  <div style="background:#1e1e2e; color:#fff; padding:12px 16px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 2px 8px rgba(0,0,0,.1);">
+    <div style="font-weight:700; font-size:18px;">{{ storeName }}</div>
+    <div style="display:flex; gap:12px; align-items:center;">
+      <div style="position:relative;">
+        <button onClick="{{ toggleNotifications }}" style="width:40px; height:40px; border:none; background:transparent; color:#fff; cursor:pointer; font-size:20px; position:relative; display:flex; align-items:center; justify-content:center;">
+          🔔
+          <sc-if value="{{ hasUnreadOrders }}" hint-placeholder-val="{{ false }}">
+            <span style="position:absolute; top:6px; right:4px; width:8px; height:8px; background:#ff4757; border-radius:50%;"></span>
+          </sc-if>
+        </button>
+      </div>
+      <button onClick="{{ toggleMenu }}" style="width:40px; height:40px; border:none; background:transparent; color:#fff; cursor:pointer; font-size:20px;">⚙️</button>
+    </div>
+  </div>
+
+  <!-- NOTIFICATIONS PANEL (overlay) -->
+  <sc-if value="{{ notificationsOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:40;" onClick="{{ toggleNotifications }}"></div>
+    <div style="position:fixed; top:60px; right:0; width:100%; max-width:360px; height:60vh; background:#fff; border-radius:12px 12px 0 0; box-shadow:0 -2px 12px rgba(0,0,0,.15); z-index:41; overflow-y:auto; display:flex; flex-direction:column;">
+      <div style="padding:16px; border-bottom:1px solid #e0e0e0;">
+        <div style="font-weight:600; font-size:14px; color:#1e1e2e;">Pedidos nuevos</div>
+        <div style="font-size:12px; color:#888; margin-top:4px;">{{ unreadOrdersCount }} pendiente(s)</div>
+      </div>
+      <sc-for list="{{ recentOrders }}" as="order" hint-placeholder-count="3">
+        <div style="padding:12px 16px; border-bottom:1px solid #f0f0f0; cursor:pointer; hover:{ background:#f9f9fb };" onClick="{{ order.onTap }}">
+          <div style="font-weight:600; font-size:13px; color:#1e1e2e;">{{ order.customerName }}</div>
+          <div style="font-size:12px; color:#888; margin-top:2px;">{{ order.items }} item(s) · {{ order.totalFmt }}</div>
+          <div style="font-size:11px; color:#666; margin-top:4px; display:flex; gap:8px; align-items:center;">
+            <span style="background:{{ order.statusColor }}; color:#fff; padding:2px 8px; border-radius:12px; font-weight:500;">{{ order.status }}</span>
+            <span>{{ order.timeAgo }}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <!-- CONTENT WITH TOP TABS -->
+  <div style="flex:1; display:flex; flex-direction:column;">
+    <!-- TOP TABS -->
+    <div style="background:#fff; border-bottom:2px solid #e0e0e0; display:flex; overflow-x:auto;">
+      <sc-for list="{{ tabs }}" as="tab" hint-placeholder-count="5">
+        <button onClick="{{ tab.onClick }}" style="flex:0 0 auto; padding:14px 20px; border:none; background:transparent; color:{{ tab.isActive ? '#2563eb' : '#888' }}; cursor:pointer; font-weight:{{ tab.isActive ? '600' : '500' }}; font-size:14px; border-bottom:3px solid {{ tab.isActive ? '#2563eb' : 'transparent' }}; white-space:nowrap; transition:all .2s;">
+          {{ tab.label }} <sc-if value="{{ tab.badge }}" hint-placeholder-val="{{ false }}"><span style="margin-left:6px; background:#ff4757; color:#fff; padding:2px 6px; border-radius:10px; font-size:11px; font-weight:600;">{{ tab.badge }}</span></sc-if>
+        </button>
+      </sc-for>
+    </div>
+
+    <!-- SCROLL AREA -->
+    <div style="flex:1; overflow-y:auto; padding:16px;">
+      
+      <!-- TAB: DASHBOARD -->
+      <sc-if value="{{ isTab_dashboard }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1200px;">
+          <!-- KPI CARDS -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:24px;">
+            <sc-for list="{{ kpiCards }}" as="kpi" hint-placeholder-count="4">
+              <div style="background:#fff; border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08);">
+                <div style="font-size:12px; color:#888; font-weight:500;">{{ kpi.label }}</div>
+                <div style="font-size:24px; font-weight:700; color:{{ kpi.color }}; margin-top:8px;">{{ kpi.value }}</div>
+                <div style="font-size:11px; color:#bbb; margin-top:6px;">{{ kpi.change }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- RECENT ORDERS LIST -->
+          <div style="background:#fff; border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08);">
+            <div style="font-weight:600; font-size:14px; margin-bottom:12px; color:#1e1e2e;">Pedidos recientes</div>
+            <sc-for list="{{ dashboardOrders }}" as="order" hint-placeholder-count="3">
+              <div style="padding:12px 0; border-bottom:1px solid #f0f0f0; display:flex; justify-content:space-between; align-items:center;">
+                <div style="flex:1;">
+                  <div style="font-weight:500; font-size:13px; color:#1e1e2e;">{{ order.id }}</div>
+                  <div style="font-size:12px; color:#888;">{{ order.customerName }} · {{ order.items }} item(s)</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-weight:600; font-size:13px; color:#1e1e2e;">{{ order.totalFmt }}</div>
+                  <span style="background:{{ order.statusColor }}; color:#fff; padding:3px 8px; border-radius:10px; font-size:11px; font-weight:500;">{{ order.status }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- TAB: ORDERS -->
+      <sc-if value="{{ isTab_orders }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1200px;">
+          <!-- FILTERS -->
+          <div style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+            <sc-for list="{{ statusFilters }}" as="filter" hint-placeholder-count="5">
+              <button onClick="{{ filter.onClick }}" style="padding:8px 14px; border:1.5px solid {{ filter.isActive ? '#2563eb' : '#d0d0d0' }}; background:{{ filter.isActive ? '#2563eb' : '#fff' }}; color:{{ filter.isActive ? '#fff' : '#666' }}; border-radius:20px; font-size:12px; font-weight:500; cursor:pointer;">
+                {{ filter.label }}
+              </button>
+            </sc-for>
+          </div>
+
+          <!-- ORDERS TABLE -->
+          <div style="background:#fff; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.08); overflow:hidden;">
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead style="background:#f8f8fa; border-bottom:1px solid #e0e0e0;">
+                  <tr style="text-align:left;">
+                    <th style="padding:12px 16px; font-weight:600; color:#666;">Pedido</th>
+                    <th style="padding:12px 16px; font-weight:600; color:#666;">Cliente</th>
+                    <th style="padding:12px 16px; font-weight:600; color:#666;">Monto</th>
+                    <th style="padding:12px 16px; font-weight:600; color:#666;">Estado</th>
+                    <th style="padding:12px 16px; font-weight:600; color:#666;">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ filteredOrders }}" as="order" hint-placeholder-count="5">
+                    <tr style="border-bottom:1px solid #f0f0f0; hover:{ background:#f9f9fb };">
+                      <td style="padding:12px 16px; font-weight:500; color:#2563eb; cursor:pointer;" onClick="{{ order.onTap }}">{{ order.id }}</td>
+                      <td style="padding:12px 16px; color:#1e1e2e;">{{ order.customerName }}</td>
+                      <td style="padding:12px 16px; color:#1e1e2e; font-weight:600;">{{ order.totalFmt }}</td>
+                      <td style="padding:12px 16px;">
+                        <button onClick="{{ order.onCycleStatus }}" style="background:{{ order.statusColor }}; color:#fff; border:none; padding:4px 8px; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer;">
+                          {{ order.status }}
+                        </button>
+                      </td>
+                      <td style="padding:12px 16px;">
+                        <button onClick="{{ order.onOpenPayment }}" style="background:#2563eb; color:#fff; border:none; padding:6px 10px; border-radius:6px; font-size:11px; cursor:pointer; font-weight:500;">💳 Pagar</button>
+                      </td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- TAB: APARTADOS -->
+      <sc-if value="{{ isTab_layaways }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1200px;">
+          <div style="background:#fff; border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08);">
+            <div style="font-weight:600; font-size:14px; margin-bottom:16px;">Apartados activos</div>
+            <sc-for list="{{ layaways }}" as="layaway" hint-placeholder-count="3">
+              <div style="padding:16px; border:1px solid #e0e0e0; border-radius:8px; margin-bottom:12px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+                  <div>
+                    <div style="font-weight:600; color:#1e1e2e;">{{ layaway.customerName }}</div>
+                    <div style="font-size:12px; color:#888;">{{ layaway.productName }} · {{ layaway.daysLeft }} días</div>
+                  </div>
+                  <div style="text-align:right;">
+                    <div style="font-weight:600; color:#2563eb;">{{ layaway.paidFmt }} / {{ layaway.totalFmt }}</div>
+                    <div style="font-size:11px; color:#888;">{{ layaway.percentPaid }}%</div>
+                  </div>
+                </div>
+                <div style="width:100%; height:6px; background:#e0e0e0; border-radius:3px; margin-bottom:8px; overflow:hidden;">
+                  <div style="height:100%; background:#2563eb; width:{{ layaway.percentPaid }}%;"></div>
+                </div>
+                <button onClick="{{ layaway.onRegisterAbono }}" style="width:100%; padding:8px; background:#f0f0f0; border:none; border-radius:6px; color:#2563eb; font-weight:500; font-size:12px; cursor:pointer;">+ Registrar abono</button>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- TAB: PRODUCTOS -->
+      <sc-if value="{{ isTab_products }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1200px;">
+          <button onClick="{{ onAddProduct }}" style="margin-bottom:16px; padding:10px 16px; background:#2563eb; color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer;">+ Agregar producto</button>
+          <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px;">
+            <sc-for list="{{ products }}" as="product" hint-placeholder-count="6">
+              <div style="background:#fff; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.08); hover:{ box-shadow: 0 4px 12px rgba(0,0,0,.12) };">
+                <div style="width:100%; height:120px; background:#f0f0f0; display:flex; align-items:center; justify-content:center; color:#bbb; font-size:28px;">
+                  {{ product.emoji }}
+                </div>
+                <div style="padding:10px;">
+                  <div style="font-weight:500; font-size:12px; color:#1e1e2e; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ product.name }}</div>
+                  <div style="font-size:13px; font-weight:600; color:#2563eb; margin-top:4px;">{{ product.priceFmt }}</div>
+                  <div style="font-size:11px; color:#888; margin-top:2px;">Stock: {{ product.stock }}</div>
+                  <button onClick="{{ product.onEdit }}" style="width:100%; margin-top:8px; padding:6px; background:#f0f0f0; border:none; border-radius:4px; font-size:11px; cursor:pointer; color:#2563eb; font-weight:500;">Editar</button>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- TAB: CONFIGURACION -->
+      <sc-if value="{{ isTab_settings }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:600px;">
+          <div style="background:#fff; border-radius:12px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08);">
+            <div style="font-weight:600; font-size:14px; margin-bottom:16px;">Configuración de la tienda</div>
+            
+            <div style="margin-bottom:20px;">
+              <label style="display:block; font-weight:500; font-size:12px; color:#666; margin-bottom:6px;">Proveedor de pago</label>
+              <select style="width:100%; padding:8px 12px; border:1px solid #d0d0d0; border-radius:6px; font-size:13px;">
+                <option>Mercado Pago</option>
+                <option>Conekta</option>
+              </select>
+            </div>
+
+            <div style="margin-bottom:20px;">
+              <label style="display:block; font-weight:500; font-size:12px; color:#666; margin-bottom:6px;">% de anticipo para apartados</label>
+              <input type="number" value="{{ layawayPercent }}" style="width:100%; padding:8px 12px; border:1px solid #d0d0d0; border-radius:6px; font-size:13px;" />
+            </div>
+
+            <div style="margin-bottom:20px;">
+              <label style="display:block; font-weight:500; font-size:12px; color:#666; margin-bottom:6px;">Plazo máximo de apartado (días)</label>
+              <input type="number" value="{{ layawayDays }}" style="width:100%; padding:8px 12px; border:1px solid #d0d0d0; border-radius:6px; font-size:13px;" />
+            </div>
+
+            <button onClick="{{ onSaveSettings }}" style="width:100%; padding:10px; background:#2563eb; color:#fff; border:none; border-radius:6px; font-weight:600; cursor:pointer;">Guardar</button>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+
+  <!-- ===== PAYMENT DIALOG ===== -->
+  <sc-if value="{{ paymentDialogOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:50;" onClick="{{ closePaymentDialog }}"></div>
+    <div style="position:fixed; bottom:0; left:0; right:0; background:#fff; border-radius:20px 20px 0 0; padding:24px 20px; z-index:51; max-height:90vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div style="font-weight:700; font-size:18px; color:#1e1e2e;">Registrar pago</div>
+        <button onClick="{{ closePaymentDialog }}" style="border:none; background:#f0f0f0; border-radius:50%; width:34px; height:34px; cursor:pointer; font-size:15px; color:#666;">✕</button>
+      </div>
+      <div style="background:#f8f8fa; border-radius:10px; padding:12px 14px; margin-bottom:18px;">
+        <div style="font-weight:600; font-size:13px; color:#1e1e2e;">{{ payDialog.orderId }} · {{ payDialog.customerName }}</div>
+        <div style="font-size:16px; font-weight:700; color:#2563eb; margin-top:6px;">Total: {{ payDialog.totalFmt }}</div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px; font-weight:600; color:#666; margin-bottom:8px;">Concepto</div>
+        <div style="display:flex; gap:8px;">
+          <sc-for list="{{ payDialog.concepts }}" as="pc" hint-placeholder-count="3">
+            <button onClick="{{ pc.onClick }}" style="flex:1; padding:10px 6px; border:1.5px solid {{ pc.isActive ? '#2563eb' : '#d0d0d0' }}; background:{{ pc.isActive ? '#eff6ff' : '#fff' }}; color:{{ pc.isActive ? '#2563eb' : '#666' }}; border-radius:8px; font-size:11px; font-weight:600; cursor:pointer;">{{ pc.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+      <div style="margin-bottom:16px;">
+        <div style="font-size:12px; font-weight:600; color:#666; margin-bottom:8px;">Monto (MXN)</div>
+        <input value="{{ payDialog.amount }}" onInput="{{ payDialog.onAmountInput }}" inputmode="decimal" placeholder="0.00" style="width:100%; height:52px; border:1.5px solid #d0d0d0; border-radius:10px; padding:0 14px; font-size:22px; font-weight:600; color:#1e1e2e; outline:none; box-sizing:border-box;" />
+      </div>
+      <div style="margin-bottom:20px;">
+        <div style="font-size:12px; font-weight:600; color:#666; margin-bottom:8px;">Forma de pago</div>
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;">
+          <sc-for list="{{ payDialog.methods }}" as="pm" hint-placeholder-count="4">
+            <button onClick="{{ pm.onClick }}" style="padding:10px 4px; border:1.5px solid {{ pm.isActive ? '#2563eb' : '#d0d0d0' }}; background:{{ pm.isActive ? '#eff6ff' : '#fff' }}; border-radius:8px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px;">
+              <span style="font-size:22px;">{{ pm.icon }}</span>
+              <span style="font-size:11px; font-weight:600; color:{{ pm.isActive ? '#2563eb' : '#666' }};">{{ pm.label }}</span>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+      <sc-if value="{{ payDialog.showScanner }}" hint-placeholder-val="{{ false }}">
+        <button onClick="{{ openScanner }}" style="width:100%; padding:12px; background:#f5f0ff; border:1.5px dashed #7c3aed; border-radius:10px; color:#7c3aed; font-weight:600; font-size:14px; cursor:pointer; margin-bottom:16px; display:flex; align-items:center; justify-content:center; gap:8px;">
+          📷 Escanear código OXXO
+        </button>
+      </sc-if>
+      <button onClick="{{ payDialog.onConfirm }}" style="width:100%; padding:14px; background:#2563eb; color:#fff; border:none; border-radius:12px; font-weight:700; font-size:16px; cursor:pointer;">Confirmar pago</button>
+    </div>
+  </sc-if>
+
+  <!-- ===== ORDER DETAIL PANEL ===== -->
+  <sc-if value="{{ orderDetailOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:50;" onClick="{{ closeOrderDetail }}"></div>
+    <div style="position:fixed; right:0; top:0; bottom:0; width:100%; max-width:420px; background:#fff; box-shadow:-4px 0 24px rgba(0,0,0,.14); z-index:51; overflow-y:auto; display:flex; flex-direction:column;">
+      <div style="background:#1e1e2e; color:#fff; padding:20px 16px; display:flex; align-items:center; gap:12px;">
+        <button onClick="{{ closeOrderDetail }}" style="border:none; background:rgba(255,255,255,.15); border-radius:8px; width:36px; height:36px; color:#fff; cursor:pointer; font-size:18px;">←</button>
+        <div style="flex:1;">
+          <div style="font-weight:700; font-size:16px;">{{ orderDetail.id }}</div>
+          <div style="font-size:12px; opacity:.7; margin-top:2px;">{{ orderDetail.timeAgo }}</div>
+        </div>
+        <span style="background:{{ orderDetail.statusColor }}; padding:5px 12px; border-radius:10px; font-size:12px; font-weight:600;">{{ orderDetail.status }}</span>
+      </div>
+      <div style="padding:16px; flex:1;">
+        <div style="background:#f8f8fa; border-radius:10px; padding:14px; margin-bottom:16px;">
+          <div style="font-size:11px; font-weight:600; color:#888; letter-spacing:.5px; margin-bottom:6px;">CLIENTE</div>
+          <div style="font-weight:600; color:#1e1e2e;">{{ orderDetail.customerName }}</div>
+          <div style="font-size:12px; color:#888; margin-top:2px;">{{ orderDetail.customerPhone }}</div>
+        </div>
+        <div style="margin-bottom:16px;">
+          <div style="font-size:11px; font-weight:600; color:#888; letter-spacing:.5px; margin-bottom:10px;">ARTÍCULOS</div>
+          <sc-for list="{{ orderDetail.lineItems }}" as="li" hint-placeholder-count="2">
+            <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid #f0f0f0;">
+              <div style="width:42px; height:42px; background:#f0f0f0; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:22px; flex:none;">{{ li.emoji }}</div>
+              <div style="flex:1;">
+                <div style="font-weight:500; font-size:13px; color:#1e1e2e;">{{ li.name }}</div>
+                <div style="font-size:12px; color:#888;">Talla {{ li.size }} · ×{{ li.qty }}</div>
+              </div>
+              <div style="font-weight:600; font-size:13px; color:#1e1e2e;">{{ li.subtotalFmt }}</div>
+            </div>
+          </sc-for>
+          <div style="display:flex; justify-content:space-between; padding-top:12px;">
+            <div style="font-weight:700; color:#1e1e2e;">Total</div>
+            <div style="font-weight:700; color:#2563eb; font-size:17px;">{{ orderDetail.totalFmt }}</div>
+          </div>
+        </div>
+        <div style="margin-bottom:20px;">
+          <div style="font-size:11px; font-weight:600; color:#888; letter-spacing:.5px; margin-bottom:12px;">SEGUIMIENTO</div>
+          <sc-for list="{{ orderDetail.timeline }}" as="step" hint-placeholder-count="4">
+            <div style="display:flex; gap:10px; align-items:flex-start; margin-bottom:12px;">
+              <div style="width:26px; height:26px; border-radius:50%; background:{{ step.done ? '#2563eb' : '#e0e0e0' }}; display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px; flex:none;">{{ step.icon }}</div>
+              <div style="padding-top:3px;">
+                <div style="font-weight:600; font-size:13px; color:{{ step.done ? '#1e1e2e' : '#aaa' }};">{{ step.label }}</div>
+                <div style="font-size:11px; color:#aaa;">{{ step.time }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <!-- Historial de pagos -->
+        <sc-if value="{{ orderDetail.hasPayments }}" hint-placeholder-val="{{ false }}">
+          <div style="margin-bottom:20px;">
+            <div style="font-size:11px; font-weight:600; color:#888; letter-spacing:.5px; margin-bottom:10px;">HISTORIAL DE PAGOS</div>
+            <sc-for list="{{ orderDetail.paymentHistory }}" as="ph" hint-placeholder-count="2">
+              <div style="display:flex; align-items:center; gap:10px; padding:10px; background:#f8f8fa; border-radius:8px; margin-bottom:6px;">
+                <span style="font-size:22px;">{{ ph.icon }}</span>
+                <div style="flex:1;">
+                  <div style="font-weight:600; font-size:13px; color:#1e1e2e;">{{ ph.concept }} · {{ ph.method }}</div>
+                  <div style="font-size:11px; color:#aaa; margin-top:2px;">{{ ph.date }}</div>
+                </div>
+                <div style="font-weight:700; font-size:14px; color:#27ae60;">{{ ph.amountFmt }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+        <div style="display:flex; gap:10px;">
+          <button onClick="{{ orderDetail.onAdvanceStatus }}" style="flex:1; padding:13px; background:#2563eb; color:#fff; border:none; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer;">Avanzar estado →</button>
+          <button onClick="{{ orderDetail.onRegisterPayment }}" style="flex:1; padding:13px; background:#f0f0f0; color:#2563eb; border:none; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer;">💳 Pago</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ===== BARCODE SCANNER ===== -->
+  <sc-if value="{{ scannerOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; inset:0; background:#000; z-index:60; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+      <div style="color:#fff; font-weight:700; font-size:16px; margin-bottom:24px;">Escanear referencia OXXO</div>
+      <div style="position:relative; width:280px; height:200px; border-radius:16px; overflow:hidden; background:#111;">
+        <div style="position:absolute; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,.03) 2px,rgba(255,255,255,.04) 4px);"></div>
+        <div style="position:absolute; top:12px; left:12px; width:28px; height:28px; border-top:3px solid #fff; border-left:3px solid #fff; border-radius:4px 0 0 0;"></div>
+        <div style="position:absolute; top:12px; right:12px; width:28px; height:28px; border-top:3px solid #fff; border-right:3px solid #fff; border-radius:0 4px 0 0;"></div>
+        <div style="position:absolute; bottom:12px; left:12px; width:28px; height:28px; border-bottom:3px solid #fff; border-left:3px solid #fff; border-radius:0 0 0 4px;"></div>
+        <div style="position:absolute; bottom:12px; right:12px; width:28px; height:28px; border-bottom:3px solid #fff; border-right:3px solid #fff; border-radius:0 0 4px 0;"></div>
+        <div style="position:absolute; left:16px; right:16px; height:2px; background:rgba(37,99,235,.9); top:50%; box-shadow:0 0 10px #2563eb; animation:scanline 2s ease-in-out infinite;"></div>
+        <div style="position:absolute; inset:40px 28px; display:flex; gap:2px; align-items:center;">
+          <div style="flex:1; height:90px; background:rgba(255,255,255,.07);"></div>
+          <div style="flex:2; height:90px; background:rgba(255,255,255,.05);"></div>
+          <div style="flex:1; height:90px; background:rgba(255,255,255,.09);"></div>
+          <div style="flex:3; height:90px; background:rgba(255,255,255,.04);"></div>
+          <div style="flex:1; height:90px; background:rgba(255,255,255,.08);"></div>
+          <div style="flex:2; height:90px; background:rgba(255,255,255,.06);"></div>
+          <div style="flex:1; height:90px; background:rgba(255,255,255,.1);"></div>
+        </div>
+      </div>
+      <div style="color:rgba(255,255,255,.55); font-size:13px; margin-top:18px; text-align:center;">Apunta al código de barras de la referencia OXXO</div>
+      <div style="display:flex; gap:12px; margin-top:32px;">
+        <button onClick="{{ closeScanner }}" style="padding:12px 28px; background:rgba(255,255,255,.15); color:#fff; border:none; border-radius:10px; font-weight:500; cursor:pointer;">Cancelar</button>
+        <button onClick="{{ confirmScan }}" style="padding:12px 28px; background:#2563eb; color:#fff; border:none; border-radius:10px; font-weight:700; cursor:pointer;">✓ Simular escaneo</button>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- BOTTOM NAV -->
+  <div style="background:#fff; border-top:1px solid #e0e0e0; height:56px; display:flex;">
+    <sc-for list="{{ bottomNavItems }}" as="item" hint-placeholder-count="5">
+      <button onClick="{{ item.onClick }}" style="flex:1; border:none; background:transparent; color:{{ item.isActive ? '#2563eb' : '#888' }}; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:18px;">
+        {{ item.icon }}
+        <span style="font-size:9px; font-weight:600; letter-spacing:.2px;">{{ item.label }}</span>
+      </button>
+    </sc-for>
+  </div>
+
+  <!-- TOAST -->
+  <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed; bottom:72px; left:50%; transform:translateX(-50%); background:#1e1e2e; color:#fff; padding:12px 20px; border-radius:12px; font-size:13px; font-weight:500; box-shadow:0 4px 16px rgba(0,0,0,.2); z-index:70; white-space:nowrap; animation:fadeup .25s ease;">
+      ✓ {{ toastMsg }}
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: &quot;1200px&quot;, &quot;height&quot;: &quot;900px&quot;}}">
+class Component extends DCLogic {
+  state = {
+    currentTab: 'dashboard',
+    notificationsOpen: false,
+    menuOpen: false,
+    selectedStatusFilter: 'ALL',
+    // Payment dialog
+    paymentDialogOpen: false,
+    selectedOrderForPayment: null,
+    paymentAmount: '',
+    paymentConcept: 'VENTA',
+    paymentMethod: 'CASH',
+    // Order detail panel
+    orderDetailOpen: false,
+    selectedOrderId: null,
+    // Barcode scanner
+    scannerOpen: false,
+    scannedRef: null,
+    // Layaway abono
+    layawayAbonoDialogOpen: false,
+    selectedLayawayForAbono: null,
+    abonoAmount: '',
+  };
+
+  // Mock data
+  recentOrders = [
+    { id: '#001', customerName: 'María González', items: 2, total: 1290, status: 'PENDING', statusColor: '#ff9500', timeAgo: 'hace 5m' },
+    { id: '#002', customerName: 'Juan Pérez', items: 1, total: 789, status: 'PAID', statusColor: '#27ae60', timeAgo: 'hace 12m' },
+    { id: '#003', customerName: 'Lucía Ramírez', items: 3, total: 2145, status: 'PREPARING', statusColor: '#2563eb', timeAgo: 'hace 1h' },
+  ];
+
+  kpiData = [
+    { label: 'Hoy', value: '$4,224', change: '+12% vs ayer', color: '#2563eb' },
+    { label: 'Esta semana', value: '$18,920', change: '+8% vs semana anterior', color: '#27ae60' },
+    { label: 'Pendientes', value: '3', change: '0 apartados por vencer', color: '#ff9500' },
+    { label: 'Clientes nuevos', value: '12', change: 'Esta semana', color: '#9b59b6' },
+  ];
+
+  products = [
+    { id: 'p1', name: 'Camiseta Negra', price: 299, stock: 15, emoji: '👕' },
+    { id: 'p2', name: 'Jeans Azul', price: 899, stock: 3, emoji: '👖' },
+    { id: 'p3', name: 'Blusa Floral', price: 450, stock: 0, emoji: '🌺' },
+    { id: 'p4', name: 'Vestido Midi', price: 650, stock: 8, emoji: '👗' },
+    { id: 'p5', name: 'Chamarra', price: 1200, stock: 2, emoji: '🧥' },
+    { id: 'p6', name: 'Falda Plisada', price: 380, stock: 12, emoji: '⛱️' },
+  ];
+
+  layawayData = [
+    { id: 'l1', customerName: 'Ana Torres', productName: 'Vestido Rojo', paid: 300, total: 1000, daysLeft: 15, percentPaid: 30 },
+    { id: 'l2', customerName: 'Carlos López', productName: 'Chamarra Denim', paid: 360, total: 1200, daysLeft: 8, percentPaid: 30 },
+    { id: 'l3', customerName: 'Sofía Herrera', productName: 'Bolsa de Cuero', paid: 150, total: 500, daysLeft: 3, percentPaid: 30 },
+  ];
+
+  allOrders = [
+    { id: '#001', customerName: 'María González', items: 2, total: 1290, status: 'PENDING', statusColor: '#ff9500', method: 'CASH', timeAgo: 'Hoy · 14:30',
+      payments: [{ amount: 500, method: 'Efectivo', date: 'Hoy · 09:00', concept: 'Anticipo' }] },
+    { id: '#002', customerName: 'Juan Pérez', items: 1, total: 789, status: 'PAID', statusColor: '#27ae60', method: 'CARD', timeAgo: 'Hoy · 10:15',
+      payments: [{ amount: 789, method: 'Tarjeta', date: 'Hoy · 10:15', concept: 'Pago completo' }] },
+    { id: '#003', customerName: 'Lucía Ramírez', items: 3, total: 2145, status: 'PREPARING', statusColor: '#2563eb', method: 'SPEI', timeAgo: 'Ayer · 18:40',
+      payments: [{ amount: 1000, method: 'SPEI', date: 'Ayer · 16:00', concept: 'Anticipo' }, { amount: 1145, method: 'SPEI', date: 'Ayer · 18:40', concept: 'Liquidación' }] },
+    { id: '#004', customerName: 'Ana Torres', items: 1, total: 1500, status: 'READY_FOR_PICKUP', statusColor: '#9b59b6', method: 'CASH', timeAgo: 'Ayer · 12:30',
+      payments: [{ amount: 450, method: 'Efectivo', date: 'Sáb · 11:00', concept: 'Anticipo' }, { amount: 1050, method: 'Efectivo', date: 'Ayer · 12:30', concept: 'Liquidación' }] },
+  ];
+
+  fmt(n) { return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n); }
+
+  STATUS_LABELS = { PENDING:'Pendiente', PAID:'Pagado', PREPARING:'Preparando', READY_FOR_PICKUP:'Listo para entregar', DELIVERED:'Entregado', CANCELLED:'Cancelado' };
+  STATUS_COLORS = { PENDING:'#ff9500', PAID:'#27ae60', PREPARING:'#2563eb', READY_FOR_PICKUP:'#9b59b6', DELIVERED:'#16a34a', CANCELLED:'#dc2626' };
+  STATUS_FLOW   = ['PENDING','PAID','PREPARING','READY_FOR_PICKUP','DELIVERED'];
+
+  setTab(tab) { this.setState({ currentTab: tab, selectedStatusFilter: 'ALL' }); }
+  toggleNotifications() { this.setState(s => ({ notificationsOpen: !s.notificationsOpen })); }
+  toggleMenu() { this.setState(s => ({ menuOpen: !s.menuOpen })); }
+
+  cycleStatus(orderId) {
+    const order = this.allOrders.find(o => o.id === orderId);
+    const idx = this.STATUS_FLOW.indexOf(order.status);
+    order.status = this.STATUS_FLOW[Math.min(idx + 1, this.STATUS_FLOW.length - 1)];
+    this.forceUpdate();
+  }
+
+  // ── Payment dialog ──
+  openPaymentDialog(orderId) {
+    const order = this.allOrders.find(o => o.id === orderId);
+    this.setState({ paymentDialogOpen: true, selectedOrderForPayment: orderId, paymentAmount: String(order ? order.total : ''), paymentConcept: 'VENTA', paymentMethod: 'CASH' });
+  }
+  closePaymentDialog() { this.setState({ paymentDialogOpen: false }); }
+  registerPayment() {
+    const amt = parseFloat(this.state.paymentAmount);
+    if (isNaN(amt) || amt <= 0) return;
+    const order = this.allOrders.find(o => o.id === this.state.selectedOrderForPayment);
+    if (order) { order.status = 'PAID'; order.statusColor = this.STATUS_COLORS.PAID; }
+    this.setState({ paymentDialogOpen: false, paymentAmount: '' });
+    this.showToast('Pago registrado: ' + this.fmt(amt));
+  }
+
+  // ── Order detail panel ──
+  openOrderDetail(orderId) { this.setState({ orderDetailOpen: true, selectedOrderId: orderId }); }
+  closeOrderDetail() { this.setState({ orderDetailOpen: false, selectedOrderId: null }); }
+
+  // ── Barcode scanner ──
+  openScanner()   { this.setState({ scannerOpen: true }); }
+  closeScanner()  { this.setState({ scannerOpen: false }); }
+  confirmScan() {
+    const ref = 'OXX-' + Math.random().toString(36).slice(2,10).toUpperCase();
+    this.setState({ scannerOpen: false, scannedRef: ref, paymentAmount: String(this.allOrders.find(o => o.id === this.state.selectedOrderForPayment)?.total || '') });
+    this.showToast('Referencia escaneada: ' + ref);
+  }
+
+  // ── Layaway abono ──
+  openLayawayAbono(layawayId) { this.setState({ layawayAbonoDialogOpen: true, selectedLayawayForAbono: layawayId, abonoAmount: '' }); }
+  registerLayawayAbono() {
+    const amt = parseFloat(this.state.abonoAmount);
+    if (isNaN(amt) || amt <= 0) return;
+    const lay = this.layawayData.find(l => l.id === this.state.selectedLayawayForAbono);
+    if (lay) { lay.paid = Math.min(lay.paid + amt, lay.total); lay.percentPaid = Math.round(lay.paid / lay.total * 100); }
+    this.setState({ layawayAbonoDialogOpen: false, abonoAmount: '' });
+    this.showToast('Abono registrado: ' + this.fmt(amt));
+  }
+
+  showToast(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._toast);
+    this._toast = setTimeout(() => this.setState({ toast: null }), 2800);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const tabs = [
+      { label: 'Dashboard', key: 'dashboard', badge: null },
+      { label: 'Pedidos', key: 'orders', badge: this.recentOrders.length > 0 ? String(this.recentOrders.length) : null },
+      { label: 'Apartados', key: 'layaways', badge: this.layawayData.length > 0 ? String(this.layawayData.length) : null },
+      { label: 'Productos', key: 'products', badge: null },
+      { label: 'Configuración', key: 'settings', badge: null },
+    ];
+
+    const filteredOrders = s.selectedStatusFilter === 'ALL'
+      ? this.allOrders
+      : this.allOrders.filter(o => o.status === s.selectedStatusFilter);
+
+    // ── Payment dialog ──
+    const payOrder = this.allOrders.find(o => o.id === s.selectedOrderForPayment);
+    const CONCEPTS = ['VENTA', 'ABONO', 'ANTICIPO'];
+    const METHODS  = [
+      { key:'CASH', icon:'💵', label:'Efectivo' },
+      { key:'CARD', icon:'💳', label:'Tarjeta' },
+      { key:'SPEI', icon:'🏦', label:'SPEI' },
+      { key:'OXXO', icon:'🏪', label:'OXXO' },
+    ];
+    const payDialog = {
+      orderId: payOrder ? payOrder.id : '',
+      customerName: payOrder ? payOrder.customerName : '',
+      totalFmt: payOrder ? this.fmt(payOrder.total) : '',
+      amount: s.paymentAmount,
+      onAmountInput: (e) => this.setState({ paymentAmount: e.target.value.replace(/[^\d.]/g,'') }),
+      concepts: CONCEPTS.map(c => ({ label: c, isActive: s.paymentConcept === c, onClick: () => this.setState({ paymentConcept: c }) })),
+      methods:  METHODS.map(m => ({ ...m, isActive: s.paymentMethod === m.key, onClick: () => this.setState({ paymentMethod: m.key }) })),
+      showScanner: s.paymentMethod === 'OXXO',
+      onConfirm: () => this.registerPayment(),
+    };
+
+    // ── Order detail panel ──
+    const det = this.allOrders.find(o => o.id === s.selectedOrderId);
+    const DETAIL_ITEMS = {
+      '#001': [{ name:'Vestido Negro', size:'M', qty:1, price:890, emoji:'👗' },{ name:'Blusa Floral', size:'S', qty:1, price:400, emoji:'🌺' }],
+      '#002': [{ name:'Jeans Azul', size:'30', qty:1, price:789, emoji:'👖' }],
+      '#003': [{ name:'Camiseta Negra', size:'L', qty:2, price:598, emoji:'👕' },{ name:'Chamarra', size:'M', qty:1, price:1200, emoji:'🧥' },{ name:'Falda Plisada', size:'M', qty:1, price:347, emoji:'⛱️' }],
+      '#004': [{ name:'Vestido Midi', size:'S', qty:1, price:1500, emoji:'👗' }],
+    };
+    const TIMELINE_STEPS = ['PENDING','PAID','PREPARING','READY_FOR_PICKUP','DELIVERED'];
+    const TIMELINE_ICONS = { PENDING:'📋', PAID:'✓', PREPARING:'📦', READY_FOR_PICKUP:'🛍️', DELIVERED:'🏠' };
+    const TIMELINE_LABELS = { PENDING:'Pedido recibido', PAID:'Pago confirmado', PREPARING:'En preparación', READY_FOR_PICKUP:'Listo para entregar', DELIVERED:'Entregado' };
+    const detItems = det ? (DETAIL_ITEMS[det.id] || []) : [];
+    const detStatusIdx = det ? TIMELINE_STEPS.indexOf(det.status) : -1;
+    const orderDetail = {
+      id: det ? det.id : '',
+      customerName: det ? det.customerName : '',
+      customerPhone: '55 1234 5678',
+      status: det ? (this.STATUS_LABELS[det.status] || det.status) : '',
+      statusColor: det ? (this.STATUS_COLORS[det.status] || '#888') : '#888',
+      timeAgo: det ? det.timeAgo : '',
+      totalFmt: det ? this.fmt(det.total) : '',
+      lineItems: detItems.map(i => ({ ...i, subtotalFmt: this.fmt(i.price) })),
+      hasPayments: det ? (det.payments||[]).length > 0 : false,
+      paymentHistory: det ? (det.payments||[]).map(p=>({ ...p, amountFmt: this.fmt(p.amount), icon: {Efectivo:'💵',Tarjeta:'💳',Transferencia:'🏦',SPEI:'🏦',OXXO:'🏪',CASH:'💵',CARD:'💳'}[p.method]||'💰' })) : [],
+      timeline: TIMELINE_STEPS.map((step, idx) => ({
+        icon: TIMELINE_ICONS[step],
+        label: TIMELINE_LABELS[step],
+        done: idx <= detStatusIdx,
+        time: idx < detStatusIdx ? 'Completado' : idx === detStatusIdx ? 'Estado actual' : 'Pendiente',
+      })),
+      onAdvanceStatus: () => { if (det) { this.cycleStatus(det.id); this.forceUpdate(); } },
+      onRegisterPayment: () => { this.setState({ orderDetailOpen: false }); setTimeout(() => this.openPaymentDialog(s.selectedOrderId), 100); },
+    };
+
+    return {
+      storeName: 'Mi Tienda Online',
+      hasUnreadOrders: this.recentOrders.length > 0,
+      unreadOrdersCount: this.recentOrders.length,
+      toggleNotifications: () => this.toggleNotifications(),
+      toggleMenu: () => this.toggleMenu(),
+      notificationsOpen: s.notificationsOpen,
+      recentOrders: this.recentOrders.map(o => ({
+        ...o, totalFmt: this.fmt(o.total),
+        onTap: () => this.openOrderDetail(o.id),
+      })),
+
+      tabs: tabs.map(t => ({ ...t, isActive: s.currentTab === t.key, onClick: () => this.setTab(t.key) })),
+
+      isTab_dashboard: s.currentTab === 'dashboard',
+      kpiCards: this.kpiData.map(k => ({ ...k })),
+      dashboardOrders: this.recentOrders.map(o => ({
+        ...o, totalFmt: this.fmt(o.total),
+        onTap: () => this.openOrderDetail(o.id),
+      })),
+
+      isTab_orders: s.currentTab === 'orders',
+      statusFilters: [
+        { label:'Todos',    value:'ALL',              isActive: s.selectedStatusFilter==='ALL',              onClick: ()=>this.setState({ selectedStatusFilter:'ALL' }) },
+        { label:'Pendientes',value:'PENDING',         isActive: s.selectedStatusFilter==='PENDING',         onClick: ()=>this.setState({ selectedStatusFilter:'PENDING' }) },
+        { label:'Pagados',  value:'PAID',             isActive: s.selectedStatusFilter==='PAID',            onClick: ()=>this.setState({ selectedStatusFilter:'PAID' }) },
+        { label:'Preparando',value:'PREPARING',       isActive: s.selectedStatusFilter==='PREPARING',       onClick: ()=>this.setState({ selectedStatusFilter:'PREPARING' }) },
+        { label:'Listos',   value:'READY_FOR_PICKUP', isActive: s.selectedStatusFilter==='READY_FOR_PICKUP',onClick: ()=>this.setState({ selectedStatusFilter:'READY_FOR_PICKUP' }) },
+      ],
+      filteredOrders: filteredOrders.map(o => ({
+        ...o, totalFmt: this.fmt(o.total),
+        status: this.STATUS_LABELS[o.status] || o.status,
+        statusColor: this.STATUS_COLORS[o.status] || '#888',
+        onTap: () => this.openOrderDetail(o.id),
+        onCycleStatus: () => this.cycleStatus(o.id),
+        onOpenPayment: () => this.openPaymentDialog(o.id),
+      })),
+
+      // Payment dialog
+      paymentDialogOpen: s.paymentDialogOpen,
+      payDialog,
+      closePaymentDialog: () => this.closePaymentDialog(),
+      openScanner: () => this.openScanner(),
+
+      // Order detail
+      orderDetailOpen: s.orderDetailOpen,
+      orderDetail,
+      closeOrderDetail: () => this.closeOrderDetail(),
+
+      // Scanner
+      scannerOpen: s.scannerOpen,
+      closeScanner: () => this.closeScanner(),
+      confirmScan:  () => this.confirmScan(),
+
+      // Toast
+      toastMsg: s.toast || '',
+      hasToast: !!s.toast,
+
+      isTab_layaways: s.currentTab === 'layaways',
+      layaways: this.layawayData.map(l => ({
+        ...l,
+        totalFmt: this.fmt(l.total),
+        paidFmt: this.fmt(l.paid),
+        onRegisterAbono: () => this.openLayawayAbono(l.id),
+      })),
+
+      isTab_products: s.currentTab === 'products',
+      products: this.products.map(p => ({
+        ...p,
+        priceFmt: this.fmt(p.price),
+        onEdit: () => alert('Editar ' + p.name),
+      })),
+      onAddProduct: () => alert('Agregar producto'),
+
+      isTab_settings: s.currentTab === 'settings',
+      layawayPercent: 30,
+      layawayDays: 30,
+      onSaveSettings: () => this.showToast('Configuración guardada'),
+
+      bottomNavItems: tabs.map(t => ({
+        ...t,
+        isActive: s.currentTab === t.key,
+        icon: { dashboard: '📊', orders: '📦', layaways: '🏷️', products: '👕', settings: '⚙️' }[t.key],
+        onClick: () => this.setTab(t.key),
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>

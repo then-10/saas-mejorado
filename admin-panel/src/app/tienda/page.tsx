@@ -17,6 +17,13 @@ interface Product {
   desc: string
 }
 
+interface PaymentEntry {
+  amount: number
+  method: Payment
+  date: string
+  concept: string
+}
+
 interface Order {
   id: string
   productName: string
@@ -30,11 +37,13 @@ interface Order {
   delivered: boolean
   bucket: 'today' | 'week'
   timeLabel: string
+  payments: PaymentEntry[]
 }
 
 const PAYMENTS: Payment[] = ['Efectivo', 'Tarjeta', 'Transferencia']
 const CATEGORIES = ['Vestidos', 'Blusas', 'Pantalones', 'Faldas', 'Accesorios']
 const PRESET_SIZES = ['XS', 'S', 'M', 'L', 'XL']
+const PAY_ICON: Record<string, string> = { Efectivo: '💵', Tarjeta: '💳', Transferencia: '🏦' }
 
 const INITIAL_PRODUCTS: Product[] = [
   { id: 'p1', name: 'Vestido Negro Elegante', category: 'Vestidos', price: 450, stock: 12, sizes: ['S', 'M', 'L'], desc: 'Vestido negro de corte recto, ideal para ocasiones especiales.' },
@@ -48,13 +57,13 @@ const INITIAL_PRODUCTS: Product[] = [
 ]
 
 const INITIAL_ORDERS: Order[] = [
-  { id: 'o1', productName: 'Vestido Negro Elegante', client: 'María González', qty: 1, size: 'M', total: 450, paid: 450, payment: 'Tarjeta', status: 'PAGADO', delivered: true, bucket: 'today', timeLabel: '10:30 am' },
-  { id: 'o2', productName: 'Blusa Floral Verano', client: 'Laura Pérez', qty: 2, size: 'S', total: 440, paid: 200, payment: 'Efectivo', status: 'APARTADO', delivered: false, bucket: 'today', timeLabel: '11:15 am' },
-  { id: 'o3', productName: 'Pantalón Wide Leg', client: 'Carla Ruiz', qty: 1, size: 'L', total: 380, paid: 380, payment: 'Transferencia', status: 'PAGADO', delivered: false, bucket: 'today', timeLabel: '12:40 pm' },
-  { id: 'o4', productName: 'Collar Dorado Boho', client: 'María González', qty: 1, size: '', total: 95, paid: 95, payment: 'Efectivo', status: 'PAGADO', delivered: true, bucket: 'week', timeLabel: 'Lun · 09:10 am' },
-  { id: 'o5', productName: 'Falda Plisada Midi', client: 'Daniela Soto', qty: 1, size: 'S', total: 310, paid: 100, payment: 'Efectivo', status: 'APARTADO', delivered: false, bucket: 'week', timeLabel: 'Mar · 03:20 pm' },
-  { id: 'o6', productName: 'Vestido Floral Largo', client: 'Laura Pérez', qty: 1, size: 'M', total: 520, paid: 0, payment: 'Tarjeta', status: 'CANCELLED', delivered: false, bucket: 'week', timeLabel: 'Mié · 05:00 pm' },
-  { id: 'o7', productName: 'Blusa Satinada Negra', client: 'Daniela Soto', qty: 1, size: 'M', total: 260, paid: 260, payment: 'Tarjeta', status: 'PAGADO', delivered: true, bucket: 'week', timeLabel: 'Jue · 01:00 pm' },
+  { id: 'o1', productName: 'Vestido Negro Elegante', client: 'María González', qty: 1, size: 'M', total: 450, paid: 450, payment: 'Tarjeta', status: 'PAGADO', delivered: true, bucket: 'today', timeLabel: '10:30 am', payments: [{ amount: 450, method: 'Tarjeta', date: '10:30 am', concept: 'Pago completo' }] },
+  { id: 'o2', productName: 'Blusa Floral Verano', client: 'Laura Pérez', qty: 2, size: 'S', total: 440, paid: 200, payment: 'Efectivo', status: 'APARTADO', delivered: false, bucket: 'today', timeLabel: '11:15 am', payments: [{ amount: 200, method: 'Efectivo', date: '11:15 am', concept: 'Anticipo' }] },
+  { id: 'o3', productName: 'Pantalón Wide Leg', client: 'Carla Ruiz', qty: 1, size: 'L', total: 380, paid: 380, payment: 'Transferencia', status: 'PAGADO', delivered: false, bucket: 'today', timeLabel: '12:40 pm', payments: [{ amount: 380, method: 'Transferencia', date: '12:40 pm', concept: 'Pago completo' }] },
+  { id: 'o4', productName: 'Collar Dorado Boho', client: 'María González', qty: 1, size: '', total: 95, paid: 95, payment: 'Efectivo', status: 'PAGADO', delivered: true, bucket: 'week', timeLabel: 'Lun · 09:10 am', payments: [{ amount: 95, method: 'Efectivo', date: 'Lun · 09:10 am', concept: 'Pago completo' }] },
+  { id: 'o5', productName: 'Falda Plisada Midi', client: 'Daniela Soto', qty: 1, size: 'S', total: 310, paid: 100, payment: 'Efectivo', status: 'APARTADO', delivered: false, bucket: 'week', timeLabel: 'Mar · 03:20 pm', payments: [{ amount: 100, method: 'Efectivo', date: 'Mar · 03:20 pm', concept: 'Anticipo' }] },
+  { id: 'o6', productName: 'Vestido Floral Largo', client: 'Laura Pérez', qty: 1, size: 'M', total: 520, paid: 0, payment: 'Tarjeta', status: 'CANCELLED', delivered: false, bucket: 'week', timeLabel: 'Mié · 05:00 pm', payments: [] },
+  { id: 'o7', productName: 'Blusa Satinada Negra', client: 'Daniela Soto', qty: 1, size: 'M', total: 260, paid: 260, payment: 'Tarjeta', status: 'PAGADO', delivered: true, bucket: 'week', timeLabel: 'Jue · 01:00 pm', payments: [{ amount: 260, method: 'Tarjeta', date: 'Jue · 01:00 pm', concept: 'Pago completo' }] },
 ]
 
 const MK_COPIES = [
@@ -82,6 +91,8 @@ export default function TiendaRopaPage() {
   const [search, setSearch] = useState('')
   const [toast, setToast] = useState<string | null>(null)
   const [expandedClient, setExpandedClient] = useState<string | null>(null)
+  const [ventasView, setVentasView] = useState<'seguimiento' | 'completados'>('seguimiento')
+  const [expandedOrderHistory, setExpandedOrderHistory] = useState<string | null>(null)
 
   // new sale dialog
   const [saleOpen, setSaleOpen] = useState(false)
@@ -113,6 +124,11 @@ export default function TiendaRopaPage() {
 
   // marketing
   const [mkStep, setMkStep] = useState<'idle' | 'image' | 'loading' | 'done'>('idle')
+  const [mkSettingsOpen, setMkSettingsOpen] = useState(false)
+  const [mkIg, setMkIg] = useState('@mitienda')
+  const [mkTk, setMkTk] = useState('@mitienda_ropa')
+  const [mkFb, setMkFb] = useState('Mi Tienda Online')
+  const [mkPreviewId, setMkPreviewId] = useState<string | null>(null)
 
   function showToast(msg: string) {
     setToast(msg)
@@ -133,6 +149,7 @@ export default function TiendaRopaPage() {
     const p = products.find((x) => x.id === saleProductId)
     if (!p || !saleClient.trim()) return
     const total = p.price * saleQty
+    const timeLabel = 'Hoy · Ahora'
     const newOrder: Order = {
       id: 'o' + Date.now(),
       productName: p.name,
@@ -145,7 +162,8 @@ export default function TiendaRopaPage() {
       status: saleStatus,
       delivered: false,
       bucket: 'today',
-      timeLabel: 'Ahora',
+      timeLabel,
+      payments: saleStatus === 'PAGADO' ? [{ amount: total, method: salePayment, date: timeLabel, concept: 'Pago completo' }] : [],
     }
     setOrders((prev) => [newOrder, ...prev])
     setProducts((prev) => prev.map((x) => (x.id === p.id ? { ...x, stock: Math.max(0, x.stock - saleQty) } : x)))
@@ -231,12 +249,15 @@ export default function TiendaRopaPage() {
   function applyAbono() {
     const amt = parseFloat(abonoAmount)
     if (isNaN(amt) || amt <= 0) return
+    const now = new Date()
+    const timeLabel = 'Hoy · ' + now.getHours() + ':' + String(now.getMinutes()).padStart(2, '0')
     if (abonoOrderId) {
       setOrders((prev) =>
         prev.map((o) => {
           if (o.id !== abonoOrderId) return o
           const paid = Math.min(o.total, o.paid + amt)
-          return { ...o, paid, status: paid >= o.total ? 'PAGADO' : o.status }
+          const entry: PaymentEntry = { amount: amt, method: 'Efectivo', date: timeLabel, concept: paid >= o.total ? 'Liquidación' : 'Abono' }
+          return { ...o, paid, status: paid >= o.total ? 'PAGADO' : o.status, payments: [...o.payments, entry] }
         })
       )
     } else {
@@ -248,7 +269,8 @@ export default function TiendaRopaPage() {
           const applied = Math.min(saldo, remaining)
           remaining -= applied
           const paid = o.paid + applied
-          return { ...o, paid, status: paid >= o.total ? 'PAGADO' : o.status }
+          const entry: PaymentEntry = { amount: applied, method: 'Efectivo', date: timeLabel, concept: paid >= o.total ? 'Liquidación' : 'Abono' }
+          return { ...o, paid, status: paid >= o.total ? 'PAGADO' : o.status, payments: [...o.payments, entry] }
         })
       )
     }
@@ -273,7 +295,13 @@ export default function TiendaRopaPage() {
     ...o,
     ...STAT_STYLE[o.status],
     saldo: o.total - o.paid,
+    historyOpen: expandedOrderHistory === o.id,
+    onToggleHistory: () => setExpandedOrderHistory((prev) => (prev === o.id ? null : o.id)),
   }))
+
+  const isSeg = (o: Order) => !(o.status === 'PAGADO' && o.delivered)
+  const seguimientoVm = ordersVm.filter((o) => isSeg(o))
+  const completadosVm = ordersVm.filter((o) => !isSeg(o))
 
   const todayRevenue = fmt(orders.filter((o) => o.bucket === 'today' && o.status === 'PAGADO').reduce((a, o) => a + o.total, 0))
   const todayCount = orders.filter((o) => o.bucket === 'today').length
@@ -317,7 +345,11 @@ export default function TiendaRopaPage() {
         <div className="h-[600px] overflow-y-auto p-4 space-y-3">
           {tab === 'ventas' && (
             <VentasTab
-              ordersVm={ordersVm}
+              ordersVm={ventasView === 'seguimiento' ? seguimientoVm : completadosVm}
+              seguimientoCount={seguimientoVm.length}
+              completadosCount={completadosVm.length}
+              ventasView={ventasView}
+              setVentasView={(v) => { setVentasView(v); setExpandedOrderHistory(null) }}
               todayRevenue={todayRevenue}
               todayCount={todayCount}
               weekRevenue={weekRevenue}
@@ -338,7 +370,20 @@ export default function TiendaRopaPage() {
               onDelete={(id) => setDeleteId(id)}
             />
           )}
-          {tab === 'publicaciones' && <PublicacionesTab mkStep={mkStep} setMkStep={setMkStep} onGenerate={generateCopies} onCopy={showToast} />}
+          {tab === 'publicaciones' && (
+            <PublicacionesTab
+              mkStep={mkStep}
+              setMkStep={setMkStep}
+              onGenerate={generateCopies}
+              onCopy={showToast}
+              onOpenSettings={() => setMkSettingsOpen(true)}
+              mkPreviewId={mkPreviewId}
+              setMkPreviewId={setMkPreviewId}
+              mkIg={mkIg}
+              mkTk={mkTk}
+              mkFb={mkFb}
+            />
+          )}
           {tab === 'clientes' && (
             <ClientesTab
               groups={clientGroups}
@@ -438,14 +483,32 @@ export default function TiendaRopaPage() {
           onConfirm={applyAbono}
         />
       )}
+
+      {mkSettingsOpen && (
+        <MkSettingsDialog
+          mkIg={mkIg}
+          setMkIg={setMkIg}
+          mkTk={mkTk}
+          setMkTk={setMkTk}
+          mkFb={mkFb}
+          setMkFb={setMkFb}
+          onClose={() => setMkSettingsOpen(false)}
+          onSave={() => { setMkSettingsOpen(false); showToast('Configuración guardada ✓') }}
+        />
+      )}
     </div>
   )
 }
 
 function VentasTab({
-  ordersVm, todayRevenue, todayCount, weekRevenue, onNewSale, onCycle, onToggleDelivery, onAbonar,
+  ordersVm, seguimientoCount, completadosCount, ventasView, setVentasView,
+  todayRevenue, todayCount, weekRevenue, onNewSale, onCycle, onToggleDelivery, onAbonar,
 }: {
-  ordersVm: (Order & { bg: string; fg: string; label: string; saldo: number })[]
+  ordersVm: (Order & { bg: string; fg: string; label: string; saldo: number; historyOpen: boolean; onToggleHistory: () => void })[]
+  seguimientoCount: number
+  completadosCount: number
+  ventasView: 'seguimiento' | 'completados'
+  setVentasView: (v: 'seguimiento' | 'completados') => void
   todayRevenue: string
   todayCount: number
   weekRevenue: string
@@ -454,6 +517,7 @@ function VentasTab({
   onToggleDelivery: (id: string) => void
   onAbonar: (client: string, id: string | null) => void
 }) {
+  const isSeguimiento = ventasView === 'seguimiento'
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2">
@@ -469,6 +533,22 @@ function VentasTab({
       <button onClick={onNewSale} className="w-full rounded-xl py-2.5 text-white text-sm font-semibold" style={{ backgroundColor: ACCENT }}>
         + Nueva venta
       </button>
+      <div className="flex gap-2">
+        <button
+          onClick={() => setVentasView('seguimiento')}
+          className="flex-1 py-2.5 rounded-xl text-sm font-bold"
+          style={{ backgroundColor: isSeguimiento ? ACCENT : '#F0EEF2', color: isSeguimiento ? '#fff' : 'rgba(26,26,46,.55)' }}
+        >
+          En seguimiento {seguimientoCount > 0 && `(${seguimientoCount})`}
+        </button>
+        <button
+          onClick={() => setVentasView('completados')}
+          className="flex-1 py-2.5 rounded-xl text-sm font-bold"
+          style={{ backgroundColor: !isSeguimiento ? '#1A1A2E' : '#F0EEF2', color: !isSeguimiento ? '#fff' : 'rgba(26,26,46,.55)' }}
+        >
+          Completados {completadosCount > 0 && `(${completadosCount})`}
+        </button>
+      </div>
       <div className="space-y-2">
         {ordersVm.map((o) => (
           <div key={o.id} className="border border-gray-200 rounded-xl p-3">
@@ -495,6 +575,24 @@ function VentasTab({
                 </button>
               )}
             </div>
+            {o.payments.length > 0 && (
+              <div className="mt-2 border-t border-gray-100 pt-2">
+                <button onClick={o.onToggleHistory} className="text-xs text-gray-400 flex items-center gap-1">
+                  📋 {o.payments.length} pago(s) · {fmt(o.payments[o.payments.length - 1].amount)}
+                  <span className="transition-transform" style={{ transform: o.historyOpen ? 'rotate(180deg)' : 'none' }}>▼</span>
+                </button>
+                {o.historyOpen && (
+                  <div className="mt-2 space-y-1.5">
+                    {o.payments.map((p, i) => (
+                      <div key={i} className="flex items-center justify-between text-xs bg-gray-50 rounded-lg px-2 py-1.5">
+                        <span className="text-gray-600">{PAY_ICON[p.method] || '💰'} {p.concept} · {p.date}</span>
+                        <span className="font-semibold text-gray-800">{fmt(p.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -556,16 +654,26 @@ function ProductosTab({
 }
 
 function PublicacionesTab({
-  mkStep, setMkStep, onGenerate, onCopy,
+  mkStep, setMkStep, onGenerate, onCopy, onOpenSettings, mkPreviewId, setMkPreviewId, mkIg, mkTk, mkFb,
 }: {
   mkStep: 'idle' | 'image' | 'loading' | 'done'
   setMkStep: (s: 'idle' | 'image' | 'loading' | 'done') => void
   onGenerate: () => void
   onCopy: (msg: string) => void
+  onOpenSettings: () => void
+  mkPreviewId: string | null
+  setMkPreviewId: (id: string | null) => void
+  mkIg: string
+  mkTk: string
+  mkFb: string
 }) {
+  const handleFor = (platform: string) => (platform === 'TikTok' ? mkTk : platform === 'Facebook' ? mkFb : mkIg)
   return (
     <div className="space-y-3">
-      <p className="text-xs text-gray-500">Sube una foto de tu producto y genera copys con IA para redes sociales.</p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-500 flex-1">Sube una foto de tu producto y genera copys con IA para redes sociales.</p>
+        <button onClick={onOpenSettings} className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-500 shrink-0" title="Configuración de redes">⚙️</button>
+      </div>
       {mkStep === 'idle' && (
         <div className="grid grid-cols-2 gap-2">
           <button onClick={() => setMkStep('image')} className="rounded-xl border border-dashed border-gray-300 py-6 text-sm text-gray-500">📷 Cámara</button>
@@ -587,18 +695,37 @@ function PublicacionesTab({
       )}
       {mkStep === 'done' && (
         <div className="space-y-3">
-          {MK_COPIES.map((c) => (
-            <div key={c.platform} className="border border-gray-200 rounded-xl p-3">
-              <p className="text-sm font-semibold mb-1">{c.icon} {c.platform}</p>
-              <p className="text-sm font-medium text-gray-900">{c.hook}</p>
-              <p className="text-xs text-gray-600 mt-1">{c.body}</p>
-              <p className="text-xs text-indigo-500 mt-1">{c.tags}</p>
-              <div className="flex gap-3 mt-2">
-                <button onClick={() => onCopy(`Copy de ${c.platform} copiado`)} className="text-xs font-medium" style={{ color: ACCENT }}>Copiar</button>
-                <button onClick={() => onCopy(`Compartiendo copy de ${c.platform}…`)} className="text-xs font-medium text-gray-500">Compartir</button>
+          {MK_COPIES.map((c) => {
+            const open = mkPreviewId === c.platform
+            return (
+              <div key={c.platform} className="border border-gray-200 rounded-xl p-3">
+                <p className="text-sm font-semibold mb-1">{c.icon} {c.platform}</p>
+                <p className="text-sm font-medium text-gray-900">{c.hook}</p>
+                <p className="text-xs text-gray-600 mt-1">{c.body}</p>
+                <p className="text-xs text-indigo-500 mt-1">{c.tags}</p>
+                <div className="flex gap-3 mt-2">
+                  <button onClick={() => onCopy(`Copy de ${c.platform} copiado`)} className="text-xs font-medium" style={{ color: ACCENT }}>Copiar</button>
+                  <button onClick={() => onCopy(`Compartiendo copy de ${c.platform}…`)} className="text-xs font-medium text-gray-500">Compartir</button>
+                </div>
+                <button
+                  onClick={() => setMkPreviewId(open ? null : c.platform)}
+                  className="w-full flex items-center justify-between mt-2 pt-2 border-t border-gray-100 text-xs text-gray-400"
+                >
+                  <span>{c.icon} {c.platform} · listo para compartir</span>
+                  <span className="transition-transform" style={{ transform: open ? 'rotate(180deg)' : 'none' }}>▼</span>
+                </button>
+                {open && (
+                  <div
+                    className="rounded-lg mt-2 p-3"
+                    style={{ backgroundColor: c.platform === 'TikTok' ? '#010101' : '#FFFFFF', border: c.platform === 'TikTok' ? 'none' : '1px solid #ECEAEF' }}
+                  >
+                    <p className="text-xs font-semibold" style={{ color: c.platform === 'TikTok' ? '#fff' : '#1A1A2E' }}>{handleFor(c.platform)}</p>
+                    <p className="text-xs mt-1" style={{ color: c.platform === 'TikTok' ? 'rgba(255,255,255,.6)' : 'rgba(26,26,46,.5)' }}>{c.hook}</p>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
@@ -850,6 +977,44 @@ function AbonoDialog({
         <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-gray-300 text-sm">Cancelar</button>
         <button onClick={onConfirm} disabled={!valid} className="flex-1 py-2 rounded-lg text-white text-sm font-semibold" style={{ backgroundColor: valid ? ACCENT : '#E9A8B4' }}>
           Confirmar
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
+function MkSettingsDialog({
+  mkIg, setMkIg, mkTk, setMkTk, mkFb, setMkFb, onClose, onSave,
+}: {
+  mkIg: string
+  setMkIg: (v: string) => void
+  mkTk: string
+  setMkTk: (v: string) => void
+  mkFb: string
+  setMkFb: (v: string) => void
+  onClose: () => void
+  onSave: () => void
+}) {
+  return (
+    <Modal onClose={onClose}>
+      <h3 className="text-base font-semibold text-gray-900">Configuración de redes</h3>
+      <p className="text-xs text-gray-500">Conecta tus cuentas para compartir copys directamente</p>
+      <div>
+        <p className="text-xs font-medium text-gray-600 mb-1">📸 Instagram</p>
+        <input value={mkIg} onChange={(e) => setMkIg(e.target.value)} placeholder="@tutienda" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+      </div>
+      <div>
+        <p className="text-xs font-medium text-gray-600 mb-1">🎵 TikTok</p>
+        <input value={mkTk} onChange={(e) => setMkTk(e.target.value)} placeholder="@tutienda" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+      </div>
+      <div>
+        <p className="text-xs font-medium text-gray-600 mb-1">👥 Facebook</p>
+        <input value={mkFb} onChange={(e) => setMkFb(e.target.value)} placeholder="Nombre de tu página" className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+      </div>
+      <div className="flex gap-2">
+        <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-gray-300 text-sm">Cancelar</button>
+        <button onClick={onSave} className="flex-1 py-2 rounded-lg text-white text-sm font-semibold" style={{ backgroundColor: ACCENT }}>
+          Guardar
         </button>
       </div>
     </Modal>
