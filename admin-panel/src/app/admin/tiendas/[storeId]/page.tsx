@@ -116,6 +116,11 @@ export default async function StoreOverviewPage({ params }: { params: { storeId:
           title="Configuración"
           summary="Apartados, proveedor de pagos y datos generales"
         />
+        <SectionLink
+          href={`/admin/tiendas/${store.id}/pos`}
+          title="Punto de venta"
+          summary="Registra ventas de mostrador en tiempo real"
+        />
       </div>
 
       {/* Config de la tienda */}
