@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { serializeProduct } from '@/lib/shop/serialize'
+import { getAdminSession, canAccessStore } from '@/lib/shop/admin-session'
 
 /** PUT /api/admin/shop/products/:id — actualizar (toca updatedAt → la app lo sincroniza) */
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
+  const session = await getAdminSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
+    const existing = await prisma.product.findUnique({ where: { id: params.id } })
+    if (!existing) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 })
+    if (!canAccessStore(session, existing.storeId)) {
+      return NextResponse.json({ error: 'Sin acceso a esta tienda' }, { status: 403 })
+    }
+
     const b = await req.json()
     const data: Record<string, unknown> = {}
     if (b.name !== undefined) data.name = b.name
@@ -34,10 +39,16 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
 /** DELETE — soft delete: isActive=false (la app lo elimina de Room en el siguiente sync) */
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
+  const session = await getAdminSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
+    const existing = await prisma.product.findUnique({ where: { id: params.id } })
+    if (!existing) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 })
+    if (!canAccessStore(session, existing.storeId)) {
+      return NextResponse.json({ error: 'Sin acceso a esta tienda' }, { status: 403 })
+    }
+
     await prisma.product.update({ where: { id: params.id }, data: { isActive: false } })
     return NextResponse.json({ ok: true })
   } catch {

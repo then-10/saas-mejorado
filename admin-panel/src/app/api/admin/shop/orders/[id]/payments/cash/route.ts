@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma, type Payment } from '@prisma/client'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { serializeOrder } from '@/lib/shop/serialize'
+import { getAdminSession, canAccessStore } from '@/lib/shop/admin-session'
 
 /**
  * POST /api/admin/shop/orders/:id/payments/cash  Body: { amount }
@@ -12,7 +11,7 @@ import { serializeOrder } from '@/lib/shop/serialize'
  * - LAYAWAY: cualquier monto es un abono; al cubrir el total → Layaway COMPLETED y orden PAID.
  */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
+  const session = await getAdminSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   try {
@@ -27,6 +26,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       include: { layaway: true, payments: true },
     })
     if (!order) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
+    if (!canAccessStore(session, order.storeId)) {
+      return NextResponse.json({ error: 'Sin acceso a esta tienda' }, { status: 403 })
+    }
     if (['CANCELLED', 'EXPIRED', 'DELIVERED'].includes(order.status)) {
       return NextResponse.json({ error: `El pedido está en estado ${order.status}` }, { status: 422 })
     }
@@ -69,7 +71,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     await prisma.activityLog.create({
       data: {
-        adminId: (session.user as { id?: string }).id ?? null,
+        adminId: session.user.id ?? null,
         action: 'CASH_PAYMENT_REGISTERED',
         entityType: 'Order',
         entityId: order.id,

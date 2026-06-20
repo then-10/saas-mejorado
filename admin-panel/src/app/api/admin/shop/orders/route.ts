@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { serializeOrder } from '@/lib/shop/serialize'
+import { getAdminSession, canAccessStore } from '@/lib/shop/admin-session'
 
 /** GET /api/admin/shop/orders?storeId=...&status=...&type=... */
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions)
+  const session = await getAdminSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const sp = new URL(req.url).searchParams
   const storeId = sp.get('storeId')
   if (!storeId) return NextResponse.json({ error: 'storeId es requerido' }, { status: 400 })
+  if (!canAccessStore(session, storeId)) {
+    return NextResponse.json({ error: 'Sin acceso a esta tienda' }, { status: 403 })
+  }
 
   const where: Record<string, unknown> = { storeId }
   if (sp.get('status')) where.status = sp.get('status')

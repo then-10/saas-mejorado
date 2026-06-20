@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { serializeOrder } from '@/lib/shop/serialize'
 import { createPosSale, PosSaleError, type PosSaleItemInput } from '@/lib/shop/createPosSale'
+import { getAdminSession, canAccessStore } from '@/lib/shop/admin-session'
 
 /**
  * POST /api/admin/shop/orders/pos — venta de mostrador desde el POS embebido en el panel admin.
@@ -12,7 +11,7 @@ import { createPosSale, PosSaleError, type PosSaleItemInput } from '@/lib/shop/c
  * ya protegido por el layout admin. Se registra PAID de inmediato (efectivo en mostrador).
  */
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
+  const session = await getAdminSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   let body: { storeId?: string; items?: PosSaleItemInput[] }
@@ -24,6 +23,9 @@ export async function POST(req: NextRequest) {
 
   const storeId = body.storeId
   if (!storeId) return NextResponse.json({ error: 'storeId es requerido' }, { status: 400 })
+  if (!canAccessStore(session, storeId)) {
+    return NextResponse.json({ error: 'Sin acceso a esta tienda' }, { status: 403 })
+  }
 
   const items = (body.items ?? []).filter(
     (i) => i?.productId && Number.isInteger(i.quantity) && i.quantity > 0 && i.quantity <= 50
@@ -39,7 +41,7 @@ export async function POST(req: NextRequest) {
     const order = await createPosSale(storeId, items)
     await prisma.activityLog.create({
       data: {
-        adminId: (session.user as { id?: string }).id ?? null,
+        adminId: session.user.id ?? null,
         action: 'POS_SALE',
         entityType: 'Order',
         entityId: order.id,
