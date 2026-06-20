@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { encryptField } from '@/lib/shop/payments/encryption'
+import { getAdminSession, canAccessStore } from '@/lib/shop/admin-session'
 
 /**
  * GET /api/admin/shop/stores/:id — detalle de la tienda (sin secretos)
  */
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
+  const session = await getAdminSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!canAccessStore(session, params.id)) {
+    return NextResponse.json({ error: 'Sin acceso a esta tienda' }, { status: 403 })
+  }
 
   const store = await prisma.store.findUnique({
     where: { id: params.id },
@@ -39,8 +41,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
  * Las llaves del proveedor se cifran con encryptField antes de guardar; nunca se devuelven.
  */
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions)
+  const session = await getAdminSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!canAccessStore(session, params.id)) {
+    return NextResponse.json({ error: 'Sin acceso a esta tienda' }, { status: 403 })
+  }
 
   try {
     const b = await req.json()

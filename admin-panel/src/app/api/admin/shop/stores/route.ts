@@ -1,20 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { randomBytes } from 'crypto'
 import bcrypt from 'bcryptjs'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getAdminSession } from '@/lib/shop/admin-session'
 
 function generateTempPassword(): string {
   return randomBytes(9).toString('base64url')
 }
 
-/** GET /api/admin/shop/stores — lista de tiendas con su tenant key */
+/**
+ * GET /api/admin/shop/stores — lista de tiendas con su tenant key.
+ * Un AdminUser (super-admin) ve todas; un Employee (dueño/staff) solo ve la
+ * suya propia.
+ */
 export async function GET() {
-  const session = await getServerSession(authOptions)
+  const session = await getAdminSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const stores = await prisma.store.findMany({
+    where: session.user.type === 'employee' ? { id: session.user.storeId } : undefined,
     include: { client: { select: { name: true, email: true, status: true, plan: true } } },
     orderBy: { createdAt: 'desc' },
   })
@@ -28,8 +32,11 @@ export async function GET() {
  * de empleado OWNER con contraseña temporal (se devuelve una sola vez en la respuesta).
  */
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions)
+  const session = await getAdminSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (session.user.type === 'employee') {
+    return NextResponse.json({ error: 'Solo el super-admin puede activar tiendas' }, { status: 403 })
+  }
 
   try {
     const body = await req.json()
@@ -72,7 +79,7 @@ export async function POST(req: NextRequest) {
 
     await prisma.activityLog.create({
       data: {
-        adminId: (session.user as { id?: string }).id ?? null,
+        adminId: session.user.id ?? null,
         action: 'STORE_CREATED',
         entityType: 'Store',
         entityId: store.id,
