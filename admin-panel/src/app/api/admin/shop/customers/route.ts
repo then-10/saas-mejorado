@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getAdminSession, canAccessStore } from '@/lib/shop/admin-session'
+import { findOrCreateNamedCustomer } from '@/lib/shop/customers'
 
 /**
  * GET /api/admin/shop/customers?storeId=...
@@ -51,4 +52,36 @@ export async function GET(req: NextRequest) {
       }
     }),
   })
+}
+
+/**
+ * POST /api/admin/shop/customers  Body: { storeId, name, phone? }
+ * Alta manual de cliente desde el panel (sin pasar por una venta POS).
+ * Reutiliza la misma lógica de email sintético que el POS para que, si el
+ * dueño da de alta a un cliente que ya compró por nombre, no se duplique.
+ */
+export async function POST(req: NextRequest) {
+  const session = await getAdminSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  try {
+    const { storeId, name, phone } = await req.json()
+    if (!storeId || !name || !String(name).trim()) {
+      return NextResponse.json({ error: 'storeId y name son requeridos' }, { status: 400 })
+    }
+    if (!canAccessStore(session, storeId)) {
+      return NextResponse.json({ error: 'Sin acceso a esta tienda' }, { status: 403 })
+    }
+
+    const customer = await prisma.$transaction((tx) =>
+      findOrCreateNamedCustomer(tx, storeId, name, phone ?? null)
+    )
+
+    return NextResponse.json(
+      { customer: { id: customer.id, name: customer.name, phone: customer.phone } },
+      { status: 201 }
+    )
+  } catch {
+    return NextResponse.json({ error: 'Error al crear el cliente' }, { status: 500 })
+  }
 }
