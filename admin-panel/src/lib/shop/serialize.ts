@@ -1,4 +1,4 @@
-import type { Product, Order, OrderItem, Payment, Layaway } from '@prisma/client'
+import type { Product, Order, OrderItem, Payment, Layaway, Customer } from '@prisma/client'
 
 /** Prisma Decimal -> number para JSON limpio hacia la app Android. */
 export const dec = (d: unknown) => Number(d)
@@ -19,7 +19,12 @@ export function serializeProduct(p: Product) {
   }
 }
 
-type FullOrder = Order & { items: OrderItem[]; payments: Payment[]; layaway: Layaway | null }
+type FullOrder = Order & {
+  items: OrderItem[]
+  payments: Payment[]
+  layaway: Layaway | null
+  customer?: Pick<Customer, 'id' | 'name'> | null
+}
 
 export function serializeOrder(o: FullOrder) {
   return {
@@ -30,6 +35,7 @@ export function serializeOrder(o: FullOrder) {
     total: dec(o.total),
     shippingInfo: o.shippingInfo,
     createdAt: o.createdAt.toISOString(),
+    customer: o.customer ? { id: o.customer.id, name: o.customer.name } : null,
     items: o.items.map((i) => ({
       productId: i.productId,
       name: i.name,

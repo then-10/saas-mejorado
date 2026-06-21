@@ -65,7 +65,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
       return tx.order.findUniqueOrThrow({
         where: { id: order.id },
-        include: { items: true, payments: true, layaway: true },
+        include: { items: true, payments: true, layaway: true, customer: true },
       })
     })
 

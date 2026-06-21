@@ -31,7 +31,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (b.isActive !== undefined) data.isActive = Boolean(b.isActive)
 
     const product = await prisma.product.update({ where: { id: params.id }, data })
-    return NextResponse.json({ product: serializeProduct(product) })
+    return NextResponse.json(serializeProduct(product))
   } catch {
     return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 })
   }

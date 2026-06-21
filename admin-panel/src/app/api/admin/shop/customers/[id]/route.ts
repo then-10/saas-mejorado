@@ -49,3 +49,37 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     },
   })
 }
+
+/**
+ * PUT /api/admin/shop/customers/:id  Body: { name?, phone? }
+ * Edición manual de los datos de contacto del cliente.
+ */
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getAdminSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  try {
+    const existing = await prisma.customer.findUnique({ where: { id: params.id } })
+    if (!existing) return NextResponse.json({ error: 'Cliente no encontrado' }, { status: 404 })
+    if (!canAccessStore(session, existing.storeId)) {
+      return NextResponse.json({ error: 'Sin acceso a esta tienda' }, { status: 403 })
+    }
+
+    const { name, phone } = await req.json()
+    if (name !== undefined && !String(name).trim()) {
+      return NextResponse.json({ error: 'name no puede estar vacío' }, { status: 400 })
+    }
+
+    const updated = await prisma.customer.update({
+      where: { id: params.id },
+      data: {
+        ...(name !== undefined ? { name: String(name).trim() } : {}),
+        ...(phone !== undefined ? { phone } : {}),
+      },
+    })
+
+    return NextResponse.json({ id: updated.id, name: updated.name, phone: updated.phone })
+  } catch {
+    return NextResponse.json({ error: 'Error al actualizar el cliente' }, { status: 500 })
+  }
+}

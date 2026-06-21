@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   }
 
   const products = await prisma.product.findMany({
-    where: { storeId },
+    where: { storeId, isActive: true },
     orderBy: { updatedAt: 'desc' },
   })
   return NextResponse.json({ products: products.map(serializeProduct) })
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
         isActive: b.isActive !== false,
       },
     })
-    return NextResponse.json({ product: serializeProduct(product) }, { status: 201 })
+    return NextResponse.json(serializeProduct(product), { status: 201 })
   } catch {
     return NextResponse.json({ error: 'Error al crear el producto' }, { status: 500 })
   }
