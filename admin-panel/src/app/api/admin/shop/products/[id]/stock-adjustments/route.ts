@@ -49,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return tx.product.findUniqueOrThrow({ where: { id: existing.id } })
     })
 
-    return NextResponse.json({ product: serializeProduct(updated) })
+    return NextResponse.json(serializeProduct(updated))
   } catch (err) {
     if (err instanceof Error && err.message === 'STOCK_NEGATIVE') {
       return NextResponse.json({ error: 'El ajuste dejaría el stock en negativo' }, { status: 422 })

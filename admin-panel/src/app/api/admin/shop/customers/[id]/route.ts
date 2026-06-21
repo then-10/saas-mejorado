@@ -78,7 +78,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       },
     })
 
-    return NextResponse.json({ customer: { id: updated.id, name: updated.name, phone: updated.phone } })
+    return NextResponse.json({ id: updated.id, name: updated.name, phone: updated.phone })
   } catch {
     return NextResponse.json({ error: 'Error al actualizar el cliente' }, { status: 500 })
   }

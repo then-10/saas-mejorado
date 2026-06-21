@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
     )
 
     return NextResponse.json(
-      { customer: { id: customer.id, name: customer.name, phone: customer.phone } },
+      { id: customer.id, name: customer.name, phone: customer.phone },
       { status: 201 }
     )
   } catch {

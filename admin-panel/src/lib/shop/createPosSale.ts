@@ -14,6 +14,8 @@ export interface PosSaleInput {
   paymentMethod: 'CASH_IN_STORE' | 'CARD' | 'TRANSFER'
   isLayaway?: boolean
   depositAmount?: number
+  /** Fecha de la venta; permite backdatear (seed de datos demo). Default: ahora. */
+  occurredAt?: Date
 }
 
 export class PosSaleError extends Error {
