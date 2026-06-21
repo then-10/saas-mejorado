@@ -32,7 +32,12 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const order = await createPosSale(store.id, items)
+    const order = await createPosSale(store.id, {
+      items,
+      customerName: 'Venta de mostrador',
+      paymentMethod: 'CASH_IN_STORE',
+      isLayaway: false,
+    })
     return NextResponse.json({ order: serializeOrder(order) }, { status: 201 })
   } catch (e) {
     if (e instanceof PosSaleError && e.code === 'OUT_OF_STOCK') {
@@ -54,7 +59,7 @@ export async function GET(req: NextRequest) {
 
   const orders = await prisma.order.findMany({
     where: { storeId: store.id },
-    include: { items: true, payments: true, layaway: true },
+    include: { items: true, payments: true, layaway: true, customer: true },
     orderBy: { createdAt: 'desc' },
     take: 100,
   })

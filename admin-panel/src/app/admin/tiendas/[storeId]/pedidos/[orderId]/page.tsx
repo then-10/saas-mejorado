@@ -28,7 +28,7 @@ export default async function OrderDetailPage({ params }: { params: { storeId: s
     where: { id: params.orderId, storeId: params.storeId },
     include: {
       items: true, payments: true, layaway: true,
-      customer: { select: { name: true, email: true, phone: true } },
+      customer: true,
       store: { select: { name: true } },
     },
   })

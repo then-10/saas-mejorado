@@ -54,7 +54,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return tx.order.update({
         where: { id: order.id },
         data: { status },
-        include: { items: true, payments: true, layaway: true },
+        include: { items: true, payments: true, layaway: true, customer: true },
       })
     })
 

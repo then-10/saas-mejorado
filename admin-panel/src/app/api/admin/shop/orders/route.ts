@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
         items: true,
         payments: true,
         layaway: true,
-        customer: { select: { name: true, email: true, phone: true } },
+        customer: true,
       },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * pageSize,
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
   ])
 
   return NextResponse.json({
-    orders: orders.map((o: Parameters<typeof serializeOrder>[0] & { customer: unknown }) => ({ ...serializeOrder(o), customer: o.customer })),
+    orders: orders.map(serializeOrder),
     total,
     page,
     pageSize,

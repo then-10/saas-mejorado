@@ -126,6 +126,7 @@ enum PaymentMethod {
   SPEI
   CASH_OXXO
   CASH_IN_STORE
+  TRANSFER
 }
 
 enum PaymentStatus {
