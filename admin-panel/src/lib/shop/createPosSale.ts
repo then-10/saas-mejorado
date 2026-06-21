@@ -47,6 +47,9 @@ export async function createPosSale(storeId: string, input: PosSaleInput) {
         data: { stock: { decrement: item.quantity } },
       })
       if (updated.count === 0) throw new PosSaleError('OUT_OF_STOCK', p.name)
+      await tx.stockMovement.create({
+        data: { productId: p.id, storeId, delta: -item.quantity, reason: 'VENTA' },
+      })
     }
 
     const subtotal = items.reduce((acc: Prisma.Decimal, item) => {

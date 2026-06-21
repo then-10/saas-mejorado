@@ -204,9 +204,25 @@ model Product {
   updatedAt   DateTime    @updatedAt
   store       Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
   orderItems  OrderItem[]
+  stockMovements StockMovement[]
 
   @@index([storeId, updatedAt])
   @@index([storeId, isActive])
+}
+
+// Historial de ajustes de stock (ventas, cancelaciones, conteos manuales) con razón.
+model StockMovement {
+  id        String   @id @default(cuid())
+  productId String
+  storeId   String
+  delta     Int
+  reason    String
+  note      String?
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, createdAt])
+  @@index([productId, createdAt])
 }
 
 model Customer {

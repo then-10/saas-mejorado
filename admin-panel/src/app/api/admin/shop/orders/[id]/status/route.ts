@@ -45,6 +45,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
             where: { id: item.productId },
             data: { stock: { increment: item.quantity } },
           })
+          await tx.stockMovement.create({
+            data: {
+              productId: item.productId,
+              storeId: order.storeId,
+              delta: item.quantity,
+              reason: status === 'EXPIRED' ? 'EXPIRACION' : 'CANCELACION',
+            },
+          })
         }
         await tx.layaway.updateMany({
           where: { orderId: order.id, status: 'ACTIVE' },
