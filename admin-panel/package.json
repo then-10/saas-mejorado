@@ -8,7 +8,8 @@
     "start": "next start",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate deploy",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "db:seed:demo": "tsx prisma/seed-demo-full.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.16.0",

@@ -30,7 +30,7 @@ export class PosSaleError extends Error {
  * con soporte para apartado (Layaway) con depósito ingresado a mano por el dueño.
  */
 export async function createPosSale(storeId: string, input: PosSaleInput) {
-  const { items, customerName, paymentMethod, isLayaway = false, depositAmount = 0 } = input
+  const { items, customerName, paymentMethod, isLayaway = false, depositAmount = 0, occurredAt = new Date() } = input
 
   return prisma.$transaction(async (tx) => {
     const customer = await findOrCreateNamedCustomer(tx, storeId, customerName)
@@ -73,6 +73,7 @@ export async function createPosSale(storeId: string, input: PosSaleInput) {
         status: isLayaway ? 'PENDING_PAYMENT' : 'PAID',
         subtotal,
         total: subtotal,
+        createdAt: occurredAt,
         items: {
           create: items.map((item) => {
             const p = byId.get(item.productId)!
@@ -90,7 +91,7 @@ export async function createPosSale(storeId: string, input: PosSaleInput) {
             method: paymentMethod,
             status: 'PAID',
             amount: paidAmount,
-            paidAt: new Date(),
+            paidAt: occurredAt,
           },
         },
         ...(isLayaway
@@ -101,7 +102,7 @@ export async function createPosSale(storeId: string, input: PosSaleInput) {
                   paidAmount: depositDecimal,
                   dueDate: await (async () => {
                     const store = await tx.store.findUniqueOrThrow({ where: { id: storeId } })
-                    const due = new Date()
+                    const due = new Date(occurredAt)
                     due.setDate(due.getDate() + store.layawayDays)
                     return due
                   })(),
