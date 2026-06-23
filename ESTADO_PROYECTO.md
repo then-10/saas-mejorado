@@ -12,8 +12,23 @@
 ---
 
 ## 📍 Estado actual
-- **Fecha:** 2026-06-19 · **Rama única:** `main`
-- **Último hito:** Add-on "App + POS web" (PR #9, squash `ee7fefa`) + POS embebido en
+- **Fecha:** 2026-06-23 · **Rama única:** `main`
+- **Último hito:** Cierre del gap de enforcement del add-on "App + POS" para el login
+  de la app Android (`tiendaropa-android`). El toggle `Store.isActive` ya existía y ya
+  se podía desactivar desde el panel (`StoreAddOnCard.tsx`), pero **no bloqueaba nada**
+  en el flujo real de login de la app: `lib/auth.ts` (NextAuth `authorize()`) nunca
+  comprobaba `Store.isActive`, y `resolveStore()`/`unauthorizedTenant()` solo protegen
+  la superficie `/api/shop/*` (cliente final), que esta app NO usa. Se agregó el check
+  en `GET /api/admin/shop/stores` (`src/app/api/admin/shop/stores/route.ts`): si quien
+  llama es un `Employee` (dueño/staff) y su `Store.isActive=false`, responde
+  `403 { error: "STORE_INACTIVE" }`. Este endpoint es el primero que llama la app justo
+  después de loguear, por lo que es el choke point correcto sin tocar la respuesta de
+  NextAuth. Commit `93cc86a`, pusheado a `claude/magical-lamport-4idl8d` y **ya mergeado
+  a `main` vía PR #11** (mergeado externamente, confirmado con
+  `git merge-base --is-ancestor`). El flag `Store.iaMarketingEnabled` (ya existente, sin
+  cambios de schema) ahora también se consume del lado Android para mostrar/ocultar el
+  tab de IA Marketing — ver `ESTADO_PROYECTO.md` de `tiendaropa-android`.
+- **Hito anterior:** Add-on "App + POS web" (PR #9, squash `ee7fefa`) + POS embebido en
   panel admin (sesión NextAuth, sin tenant key) MERGEADO y validado con code-review +
   security-audit. Hallazgos corregidos: passwordHash del walk-in customer ya no es
   predecible (era `email+storeId`, ahora `randomBytes(32)`), y la venta admin queda
