@@ -12,7 +12,7 @@ async function getClient(id: string) {
     include: {
       features: true,
       config: true,
-      store: { select: { id: true, apiKey: true, monthlyPrice: true } },
+      store: { select: { id: true, apiKey: true, monthlyPrice: true, isActive: true } },
     },
   })
 }
@@ -144,7 +144,12 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
             clientEmail={client.email}
             store={
               client.store
-                ? { id: client.store.id, apiKey: client.store.apiKey, monthlyPrice: Number(client.store.monthlyPrice) }
+                ? {
+                    id: client.store.id,
+                    apiKey: client.store.apiKey,
+                    monthlyPrice: Number(client.store.monthlyPrice),
+                    isActive: client.store.isActive,
+                  }
                 : null
             }
           />

@@ -158,6 +158,9 @@ model Store {
   address           String?
   // Add-on App + POS: cargo mensual independiente del Plan del Client
   monthlyPrice      Decimal              @db.Decimal(10, 2) @default(499)
+  // Permite al super-admin desactivar el add-on sin borrar datos: la app
+  // Android y el POS web dejan de poder operar (X-Tenant-Key rechazado).
+  isActive          Boolean              @default(true)
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
   client            Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)

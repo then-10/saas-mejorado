@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     where: { id: params.id },
     select: {
       id: true, name: true, currency: true, paymentProvider: true,
-      layawayDepositPct: true, layawayDays: true, address: true,
+      layawayDepositPct: true, layawayDays: true, address: true, isActive: true,
       // Booleans que indican si hay llave configurada, sin exponerla
       mpAccessTokenEnc: true, conektaKeyEnc: true,
     },
@@ -88,5 +88,48 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json({ error: 'Tienda no encontrada o datos inválidos' }, { status: 404 })
+  }
+}
+
+/**
+ * PATCH /api/admin/shop/stores/:id — activar/desactivar el add-on App + POS.
+ * Body: { isActive: boolean }
+ * Solo el super-admin puede suspender/reactivar; al desactivar, la app Android
+ * y el POS web dejan de poder autenticar (X-Tenant-Key rechazado en resolveStore),
+ * sin borrar productos, pedidos ni clientes de la tienda.
+ */
+export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const session = await getAdminSession()
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (session.user.type === 'employee') {
+    return NextResponse.json({ error: 'Solo el super-admin puede activar o desactivar la tienda' }, { status: 403 })
+  }
+
+  const b = await req.json().catch(() => null)
+  if (typeof b?.isActive !== 'boolean') {
+    return NextResponse.json({ error: 'isActive (boolean) es requerido' }, { status: 400 })
+  }
+
+  try {
+    const store = await prisma.store.update({
+      where: { id: params.id },
+      data: { isActive: b.isActive },
+    })
+
+    await prisma.activityLog.create({
+      data: {
+        adminId: session.user.id ?? null,
+        action: b.isActive ? 'STORE_REACTIVATED' : 'STORE_DEACTIVATED',
+        entityType: 'Store',
+        entityId: store.id,
+        details: b.isActive
+          ? `App + POS reactivado para ${store.name}`
+          : `App + POS desactivado para ${store.name}`,
+      },
+    })
+
+    return NextResponse.json({ ok: true, isActive: store.isActive })
+  } catch {
+    return NextResponse.json({ error: 'Tienda no encontrada' }, { status: 404 })
   }
 }

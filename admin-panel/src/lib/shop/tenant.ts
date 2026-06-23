@@ -16,6 +16,7 @@ export async function resolveStore(req: NextRequest): Promise<Store | null> {
   })
   if (!store) return null
   if (store.client.status === 'SUSPENDIDO') return null
+  if (!store.isActive) return null
 
   return store
 }
