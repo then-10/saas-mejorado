@@ -12,8 +12,26 @@
 ---
 
 ## 📍 Estado actual
-- **Fecha:** 2026-06-23 · **Rama única:** `main`
-- **Último hito:** Cierre del gap de enforcement del add-on "App + POS" para el login
+- **Fecha:** 2026-06-23 · **Rama:** `claude/magical-lamport-4idl8d` (pendiente merge a `main`)
+- **Último hito:** Nuevo endpoint `POST /api/admin/shop/customers/:id/payments` para
+  cerrar la deuda técnica de "abono a cuenta" documentada en
+  `tienda-ropa-design/ESTADO_PROYECTO.md` (Fase 3/4 de ese repo): la app Android no
+  tenía forma de registrar en el SaaS un abono entregado por el cliente sin pedido
+  asociado. **No requirió migración de schema** — `Payment.orderId` sigue NOT NULL;
+  el endpoint reparte el monto recibido entre los pedidos `LAYAWAY` con
+  `Layaway.status = ACTIVE` del cliente (más antiguos primero, dentro de un
+  `$transaction`), creando un `Payment` real (`CASH_IN_STORE`) por cada pedido
+  afectado — mismo criterio que ya usaba el wallet offline de Room en Android
+  (`registerAbonoToCuenta`). Si el monto excede la deuda total, el remanente se
+  informa en la respuesta como `unapplied` (no existe todavía concepto de "saldo a
+  favor del cliente"; si se necesita en el futuro, ahí sí haría falta el campo
+  `Customer.creditBalance` + migración). Archivo:
+  `admin-panel/src/app/api/admin/shop/customers/[id]/payments/route.ts`. Reusa
+  `getAdminSession`/`canAccessStore` de `lib/shop/admin-session.ts` (mismo patrón que
+  `orders/[id]/payments/cash/route.ts`). Verificado con `npx tsc --noEmit` (0 errores)
+  y `npx prisma validate` (schema válido) tras `npm install` + `npx prisma generate`
+  en este sandbox.
+- **Hito anterior:** Cierre del gap de enforcement del add-on "App + POS" para el login
   de la app Android (`tiendaropa-android`). El toggle `Store.isActive` ya existía y ya
   se podía desactivar desde el panel (`StoreAddOnCard.tsx`), pero **no bloqueaba nada**
   en el flujo real de login de la app: `lib/auth.ts` (NextAuth `authorize()`) nunca
