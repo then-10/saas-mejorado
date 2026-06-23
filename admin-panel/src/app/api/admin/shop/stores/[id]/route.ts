@@ -18,6 +18,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     select: {
       id: true, name: true, currency: true, paymentProvider: true,
       layawayDepositPct: true, layawayDays: true, address: true, isActive: true,
+      iaMarketingEnabled: true,
       // Booleans que indican si hay llave configurada, sin exponerla
       mpAccessTokenEnc: true, conektaKeyEnc: true,
     },
@@ -92,43 +93,69 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 /**
- * PATCH /api/admin/shop/stores/:id — activar/desactivar el add-on App + POS.
- * Body: { isActive: boolean }
- * Solo el super-admin puede suspender/reactivar; al desactivar, la app Android
- * y el POS web dejan de poder autenticar (X-Tenant-Key rechazado en resolveStore),
- * sin borrar productos, pedidos ni clientes de la tienda.
+ * PATCH /api/admin/shop/stores/:id — activar/desactivar el add-on App + POS
+ * y/o la función de IA Marketing.
+ * Body: { isActive?: boolean, iaMarketingEnabled?: boolean }
+ * Solo el super-admin puede modificar estos flags:
+ * - isActive: al desactivar, la app Android y el POS web dejan de poder
+ *   autenticar (X-Tenant-Key rechazado en resolveStore), sin borrar datos.
+ * - iaMarketingEnabled: habilita la generación de copys con IA para redes
+ *   sociales en la app; el costo corre por cuenta del SaaS (plan intermedio).
  */
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getAdminSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (session.user.type === 'employee') {
-    return NextResponse.json({ error: 'Solo el super-admin puede activar o desactivar la tienda' }, { status: 403 })
+    return NextResponse.json({ error: 'Solo el super-admin puede modificar esta configuración' }, { status: 403 })
   }
 
   const b = await req.json().catch(() => null)
-  if (typeof b?.isActive !== 'boolean') {
-    return NextResponse.json({ error: 'isActive (boolean) es requerido' }, { status: 400 })
+  const data: Record<string, boolean> = {}
+  if (typeof b?.isActive === 'boolean') data.isActive = b.isActive
+  if (typeof b?.iaMarketingEnabled === 'boolean') data.iaMarketingEnabled = b.iaMarketingEnabled
+
+  if (Object.keys(data).length === 0) {
+    return NextResponse.json(
+      { error: 'isActive y/o iaMarketingEnabled (boolean) es requerido' },
+      { status: 400 }
+    )
   }
 
   try {
     const store = await prisma.store.update({
       where: { id: params.id },
-      data: { isActive: b.isActive },
+      data,
     })
 
-    await prisma.activityLog.create({
-      data: {
-        adminId: session.user.id ?? null,
-        action: b.isActive ? 'STORE_REACTIVATED' : 'STORE_DEACTIVATED',
-        entityType: 'Store',
-        entityId: store.id,
-        details: b.isActive
-          ? `App + POS reactivado para ${store.name}`
-          : `App + POS desactivado para ${store.name}`,
-      },
-    })
+    if (typeof data.isActive === 'boolean') {
+      await prisma.activityLog.create({
+        data: {
+          adminId: session.user.id ?? null,
+          action: data.isActive ? 'STORE_REACTIVATED' : 'STORE_DEACTIVATED',
+          entityType: 'Store',
+          entityId: store.id,
+          details: data.isActive
+            ? `App + POS reactivado para ${store.name}`
+            : `App + POS desactivado para ${store.name}`,
+        },
+      })
+    }
 
-    return NextResponse.json({ ok: true, isActive: store.isActive })
+    if (typeof data.iaMarketingEnabled === 'boolean') {
+      await prisma.activityLog.create({
+        data: {
+          adminId: session.user.id ?? null,
+          action: data.iaMarketingEnabled ? 'IA_MARKETING_ENABLED' : 'IA_MARKETING_DISABLED',
+          entityType: 'Store',
+          entityId: store.id,
+          details: data.iaMarketingEnabled
+            ? `IA Marketing activada para ${store.name}`
+            : `IA Marketing desactivada para ${store.name}`,
+        },
+      })
+    }
+
+    return NextResponse.json({ ok: true, isActive: store.isActive, iaMarketingEnabled: store.iaMarketingEnabled })
   } catch {
     return NextResponse.json({ error: 'Tienda no encontrada' }, { status: 404 })
   }

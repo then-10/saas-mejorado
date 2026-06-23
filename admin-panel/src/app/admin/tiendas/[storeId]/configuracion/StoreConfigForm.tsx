@@ -11,6 +11,7 @@ type Initial = {
   address: string
   hasMpKey: boolean
   hasConektaKey: boolean
+  iaMarketingEnabled: boolean
 }
 
 export function StoreConfigForm({ storeId, initial }: { storeId: string; initial: Initial }) {
@@ -26,6 +27,8 @@ export function StoreConfigForm({ storeId, initial }: { storeId: string; initial
   const [conektaKey, setConektaKey] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
+  const [iaMarketingEnabled, setIaMarketingEnabled] = useState(initial.iaMarketingEnabled)
+  const [iaBusy, setIaBusy] = useState(false)
 
   function update<K extends keyof typeof form>(k: K, v: typeof form[K]) {
     setForm((s) => ({ ...s, [k]: v }))
@@ -54,6 +57,26 @@ export function StoreConfigForm({ storeId, initial }: { storeId: string; initial
     } catch (e) {
       setMsg({ kind: 'err', text: (e as Error).message })
     } finally { setBusy(false) }
+  }
+
+  async function toggleIaMarketing(next: boolean) {
+    setIaBusy(true); setMsg(null)
+    try {
+      const res = await fetch(`/api/admin/shop/stores/${storeId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ iaMarketingEnabled: next }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.error ?? `HTTP ${res.status}`)
+      }
+      setIaMarketingEnabled(next)
+      setMsg({ kind: 'ok', text: next ? 'IA Marketing activada.' : 'IA Marketing desactivada.' })
+      router.refresh()
+    } catch (e) {
+      setMsg({ kind: 'err', text: (e as Error).message })
+    } finally { setIaBusy(false) }
   }
 
   return (
@@ -146,6 +169,35 @@ export function StoreConfigForm({ storeId, initial }: { storeId: string; initial
             className="w-full border rounded px-3 py-2 text-sm font-mono" disabled={busy}
           />
         </Field>
+      </section>
+
+      {/* IA Marketing */}
+      <section className="bg-white rounded-lg border p-6 space-y-3">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-semibold text-gray-900">IA Marketing</h2>
+            <p className="text-xs text-gray-500 mt-1 max-w-md">
+              Genera copys con IA para redes sociales (Instagram, TikTok, Facebook) desde la app.
+              Costo cubierto por el plan intermedio.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={iaMarketingEnabled}
+            onClick={() => toggleIaMarketing(!iaMarketingEnabled)}
+            disabled={iaBusy}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+              iaMarketingEnabled ? 'bg-indigo-600' : 'bg-gray-300'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                iaMarketingEnabled ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
       </section>
 
       {msg && (
