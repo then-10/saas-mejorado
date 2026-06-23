@@ -76,7 +76,10 @@ export default function StoreAddOnCard({
         <h3 className="text-sm font-semibold text-gray-900 mb-3">App + POS activado</h3>
         <p className="text-xs text-gray-500 mb-4">
           Guarda estas credenciales ahora — la contraseña temporal no se mostrará de nuevo.
-          Configúralas en la app Android y en el POS web (<code>/tienda</code>) de {clientName}.
+          La <code>X-Tenant-Key</code> se configura en <code>local.properties</code> de la
+          app Android de catálogo (TiendaRopa, cliente final) como <code>SHOP_TENANT_KEY</code>.
+          El email/contraseña son para la app de administración del dueño y el POS web
+          (<code>/tienda</code>) de {clientName}.
         </p>
         <div className="space-y-2 text-sm">
           <CredentialRow label="X-Tenant-Key" value={created.apiKey} />
@@ -93,8 +96,9 @@ export default function StoreAddOnCard({
         <h3 className="text-sm font-semibold text-gray-900 mb-1">App + POS (add-on de pago mensual)</h3>
         <p className="text-xs text-gray-500 mb-4">
           Activa el módulo e-commerce para este cliente: catálogo, pedidos, pagos y apartados.
-          Habilita la app Android y el punto de venta web, administrados desde tu SaaS.
-          Se factura como un cargo mensual independiente del plan.
+          Habilita la app Android de catálogo para el cliente final (TiendaRopa), la app
+          de administración del dueño y el punto de venta web — todas administradas desde
+          tu SaaS. Se factura como un cargo mensual independiente del plan.
         </p>
         <div className="flex items-center gap-3 mb-4">
           <label className="text-xs text-gray-600">Precio mensual (USD)</label>
@@ -135,8 +139,9 @@ export default function StoreAddOnCard({
       </p>
       {!store.isActive && (
         <p className="text-xs text-amber-600 mb-2">
-          La app Android y el POS web no pueden autenticar mientras esté desactivado.
-          Los productos, pedidos y apartados se conservan.
+          La app Android de catálogo (cliente final), la app de administración del dueño y
+          el POS web no pueden autenticar mientras esté desactivado. Los productos, pedidos
+          y apartados se conservan.
         </p>
       )}
       <div className="mt-3 flex items-center justify-between gap-2">
