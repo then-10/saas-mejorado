@@ -11,7 +11,9 @@ function generateTempPassword(): string {
 /**
  * GET /api/admin/shop/stores — lista de tiendas con su tenant key.
  * Un AdminUser (super-admin) ve todas; un Employee (dueño/staff) solo ve la
- * suya propia.
+ * suya propia. Si el add-on "App + POS" de su tienda está desactivado
+ * (impago), se rechaza con 403 — la app Android y el POS web no pueden
+ * autenticar mientras dure la suspensión, aunque las credenciales sean válidas.
  */
 export async function GET() {
   const session = await getAdminSession()
@@ -22,6 +24,14 @@ export async function GET() {
     include: { client: { select: { name: true, email: true, status: true, plan: true } } },
     orderBy: { createdAt: 'desc' },
   })
+
+  if (session.user.type === 'employee' && stores.some((s) => !s.isActive)) {
+    return NextResponse.json(
+      { error: 'STORE_INACTIVE', message: 'La suscripción de App + POS está desactivada. Contacta a soporte.' },
+      { status: 403 }
+    )
+  }
+
   return NextResponse.json({ stores })
 }
 
