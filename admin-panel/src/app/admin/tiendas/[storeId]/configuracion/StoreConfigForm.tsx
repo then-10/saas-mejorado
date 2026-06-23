@@ -12,6 +12,7 @@ type Initial = {
   hasMpKey: boolean
   hasConektaKey: boolean
   iaMarketingEnabled: boolean
+  customerAppAccessEnabled: boolean
 }
 
 export function StoreConfigForm({ storeId, initial }: { storeId: string; initial: Initial }) {
@@ -29,6 +30,8 @@ export function StoreConfigForm({ storeId, initial }: { storeId: string; initial
   const [msg, setMsg] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null)
   const [iaMarketingEnabled, setIaMarketingEnabled] = useState(initial.iaMarketingEnabled)
   const [iaBusy, setIaBusy] = useState(false)
+  const [customerAppAccessEnabled, setCustomerAppAccessEnabled] = useState(initial.customerAppAccessEnabled)
+  const [customerAccessBusy, setCustomerAccessBusy] = useState(false)
 
   function update<K extends keyof typeof form>(k: K, v: typeof form[K]) {
     setForm((s) => ({ ...s, [k]: v }))
@@ -77,6 +80,26 @@ export function StoreConfigForm({ storeId, initial }: { storeId: string; initial
     } catch (e) {
       setMsg({ kind: 'err', text: (e as Error).message })
     } finally { setIaBusy(false) }
+  }
+
+  async function toggleCustomerAppAccess(next: boolean) {
+    setCustomerAccessBusy(true); setMsg(null)
+    try {
+      const res = await fetch(`/api/admin/shop/stores/${storeId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerAppAccessEnabled: next }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.error ?? `HTTP ${res.status}`)
+      }
+      setCustomerAppAccessEnabled(next)
+      setMsg({ kind: 'ok', text: next ? 'Acceso de clientes a la app activado.' : 'Acceso de clientes a la app desactivado.' })
+      router.refresh()
+    } catch (e) {
+      setMsg({ kind: 'err', text: (e as Error).message })
+    } finally { setCustomerAccessBusy(false) }
   }
 
   return (
@@ -169,6 +192,37 @@ export function StoreConfigForm({ storeId, initial }: { storeId: string; initial
             className="w-full border rounded px-3 py-2 text-sm font-mono" disabled={busy}
           />
         </Field>
+      </section>
+
+      {/* Acceso de clientes a la app */}
+      <section className="bg-white rounded-lg border p-6 space-y-3">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="font-semibold text-gray-900">Acceso de clientes a la app</h2>
+            <p className="text-xs text-gray-500 mt-1 max-w-md">
+              Permite que tus clientes finales creen su propia cuenta (email/contraseña) e
+              inicien sesión en la app de la tienda con credenciales independientes de las
+              tuyas como administrador. Al desactivarlo, se bloquean los registros e inicios
+              de sesión de clientes nuevos en esta tienda.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={customerAppAccessEnabled}
+            onClick={() => toggleCustomerAppAccess(!customerAppAccessEnabled)}
+            disabled={customerAccessBusy}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+              customerAppAccessEnabled ? 'bg-indigo-600' : 'bg-gray-300'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                customerAppAccessEnabled ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
       </section>
 
       {/* IA Marketing */}

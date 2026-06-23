@@ -7,6 +7,9 @@ import { signCustomerToken } from '@/lib/shop/customer-auth'
 export async function POST(req: NextRequest) {
   const store = await resolveStore(req)
   if (!store) return unauthorizedTenant()
+  if (!store.customerAppAccessEnabled) {
+    return NextResponse.json({ error: 'El acceso a la app de clientes está deshabilitado para esta tienda' }, { status: 403 })
+  }
 
   try {
     const { name, email, password, phone } = await req.json()

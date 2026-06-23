@@ -165,6 +165,10 @@ model Store {
   // El costo de las llamadas a la IA corre por cuenta del SaaS bajo el "plan intermedio";
   // el super-admin la activa/desactiva por tienda desde el panel.
   iaMarketingEnabled Boolean             @default(false)
+  // Controla si los clientes finales (Customer) pueden registrarse/iniciar sesión
+  // con su propia cuenta en la app (en vez de usar las credenciales del dueño).
+  // Se administra desde Configuración de la tienda en el panel admin.
+  customerAppAccessEnabled Boolean       @default(true)
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
   client            Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)

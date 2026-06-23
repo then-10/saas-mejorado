@@ -18,7 +18,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     select: {
       id: true, name: true, currency: true, paymentProvider: true,
       layawayDepositPct: true, layawayDays: true, address: true, isActive: true,
-      iaMarketingEnabled: true,
+      iaMarketingEnabled: true, customerAppAccessEnabled: true,
       // Booleans que indican si hay llave configurada, sin exponerla
       mpAccessTokenEnc: true, conektaKeyEnc: true,
     },
@@ -57,6 +57,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       data.paymentProvider = b.paymentProvider
     }
     if (typeof b.address === 'string') data.address = b.address || null
+    if (typeof b.customerAppAccessEnabled === 'boolean') {
+      data.customerAppAccessEnabled = b.customerAppAccessEnabled
+    }
 
     if (b.layawayDepositPct !== undefined) {
       const n = Number(b.layawayDepositPct)
