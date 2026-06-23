@@ -12,6 +12,7 @@ export default async function StoreConfigPage({ params }: { params: { storeId: s
       id: true, name: true, paymentProvider: true,
       layawayDepositPct: true, layawayDays: true, address: true,
       mpAccessTokenEnc: true, conektaKeyEnc: true, apiKey: true,
+      iaMarketingEnabled: true,
     },
   })
   if (!store) notFound()
@@ -54,6 +55,7 @@ export default async function StoreConfigPage({ params }: { params: { storeId: s
           address: store.address ?? '',
           hasMpKey: Boolean(store.mpAccessTokenEnc),
           hasConektaKey: Boolean(store.conektaKeyEnc),
+          iaMarketingEnabled: store.iaMarketingEnabled,
         }}
       />
     </div>

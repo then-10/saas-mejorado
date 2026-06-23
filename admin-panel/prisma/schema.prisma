@@ -161,6 +161,10 @@ model Store {
   // Permite al super-admin desactivar el add-on sin borrar datos: la app
   // Android y el POS web dejan de poder operar (X-Tenant-Key rechazado).
   isActive          Boolean              @default(true)
+  // Generación de copys con IA para redes sociales (Instagram/TikTok/Facebook) en la app.
+  // El costo de las llamadas a la IA corre por cuenta del SaaS bajo el "plan intermedio";
+  // el super-admin la activa/desactiva por tienda desde el panel.
+  iaMarketingEnabled Boolean             @default(false)
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
   client            Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
