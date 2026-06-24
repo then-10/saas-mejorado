@@ -9,6 +9,7 @@ interface StoreSummary {
   apiKey: string
   monthlyPrice: number | string
   isActive: boolean
+  customerAppAccessEnabled: boolean
 }
 
 export default function StoreAddOnCard({
@@ -30,6 +31,8 @@ export default function StoreAddOnCard({
   const [created, setCreated] = useState<{ apiKey: string; email: string; tempPassword: string } | null>(null)
   const [togglingActive, setTogglingActive] = useState(false)
   const [toggleError, setToggleError] = useState('')
+  const [togglingCustomerAccess, setTogglingCustomerAccess] = useState(false)
+  const [customerAccessError, setCustomerAccessError] = useState('')
 
   async function toggleActive(storeId: string, nextIsActive: boolean) {
     setTogglingActive(true)
@@ -43,6 +46,23 @@ export default function StoreAddOnCard({
     setTogglingActive(false)
     if (!res.ok) {
       setToggleError(data.error || 'Error al actualizar el estado')
+      return
+    }
+    router.refresh()
+  }
+
+  async function toggleCustomerAccess(storeId: string, nextEnabled: boolean) {
+    setTogglingCustomerAccess(true)
+    setCustomerAccessError('')
+    const res = await fetch(`/api/admin/shop/stores/${storeId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customerAppAccessEnabled: nextEnabled }),
+    })
+    const data = await res.json()
+    setTogglingCustomerAccess(false)
+    if (!res.ok) {
+      setCustomerAccessError(data.error || 'Error al actualizar el acceso de clientes')
       return
     }
     router.refresh()
@@ -139,8 +159,8 @@ export default function StoreAddOnCard({
       </p>
       {!store.isActive && (
         <p className="text-xs text-amber-600 mb-2">
-          La app Android de catálogo (cliente final), la app de administración del dueño y
-          el POS web no pueden autenticar mientras esté desactivado. Los productos, pedidos
+          Tienda desactivada: la app Android de catálogo (cliente final), la app de
+          administración del dueño y el POS web no pueden autenticar. Los productos, pedidos
           y apartados se conservan.
         </p>
       )}
@@ -156,6 +176,41 @@ export default function StoreAddOnCard({
       <p className="text-xs font-mono bg-gray-50 rounded px-2 py-1.5 mt-1 break-all">
         {revealed ? store.apiKey : '•'.repeat(24)}
       </p>
+
+      <div className="mt-4 pt-3 border-t border-gray-100">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-xs font-medium text-gray-700">Acceso de clientes a la app</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Controla si la app Android de catálogo (cliente final) puede iniciar sesión con
+              esta <code>X-Tenant-Key</code>. No afecta la app del dueño ni el POS web.
+            </p>
+          </div>
+          <button
+            onClick={() => toggleCustomerAccess(store.id, !store.customerAppAccessEnabled)}
+            disabled={togglingCustomerAccess || !store.isActive}
+            className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-50 ${
+              store.customerAppAccessEnabled
+                ? 'bg-red-50 text-red-700 hover:bg-red-100'
+                : 'bg-green-50 text-green-700 hover:bg-green-100'
+            }`}
+          >
+            {togglingCustomerAccess
+              ? 'Guardando...'
+              : store.customerAppAccessEnabled
+                ? 'Bloquear app'
+                : 'Habilitar app'}
+          </button>
+        </div>
+        {!store.customerAppAccessEnabled && store.isActive && (
+          <p className="text-xs text-amber-600 mt-2">
+            El cliente final no puede iniciar sesión en la app de catálogo. Catálogo y POS
+            del dueño siguen funcionando normalmente.
+          </p>
+        )}
+        {customerAccessError && <p className="text-xs text-red-600 mt-2">{customerAccessError}</p>}
+      </div>
+
       {toggleError && <p className="text-xs text-red-600 mt-2">{toggleError}</p>}
       <div className="mt-4 flex items-center justify-between">
         <Link

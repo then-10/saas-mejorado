@@ -12,7 +12,9 @@ async function getClient(id: string) {
     include: {
       features: true,
       config: true,
-      store: { select: { id: true, apiKey: true, monthlyPrice: true, isActive: true } },
+      store: {
+        select: { id: true, apiKey: true, monthlyPrice: true, isActive: true, customerAppAccessEnabled: true },
+      },
     },
   })
 }
@@ -149,6 +151,7 @@ export default async function ClientDetailPage({ params }: { params: { id: strin
                     apiKey: client.store.apiKey,
                     monthlyPrice: Number(client.store.monthlyPrice),
                     isActive: client.store.isActive,
+                    customerAppAccessEnabled: client.store.customerAppAccessEnabled,
                   }
                 : null
             }
