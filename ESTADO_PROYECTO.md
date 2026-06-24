@@ -77,12 +77,25 @@
 | F5 Android — productFlavors dimensión 'tienda' (generic + demo) con SHOP_BASE_URL/SHOP_TENANT_KEY/app_name por flavor; docs/FASE5_WHITELABEL.md con receta de 4 pasos para agregar una tienda | repo android `d867c8b` |
 | `.claude/` alineado a la arquitectura real + skill ecommerce-api | `783a3b8`, `0a48d66` |
 | App Android (repo `tiendaropa-android`): F2 catálogo sync + detalle, F3 checkout/pagos, navegación dual | su main `c02b3b9` |
+| Enforcement real de `Store.isActive`: bloquea login NextAuth (`authorize()`), revalida en cada `getAdminSession()` (revoca sesión ya emitida si la tienda se desactiva), y POS-web (`tienda/page.tsx`) ya no cae en "modo demo" silencioso ante 401/403 — fuerza logout real | `3769fe6`, `959b635` |
+| Gestión de credenciales del dueño desde el SaaS: `GET/PATCH /api/admin/shop/stores/[id]/owner` (email + reset de password con temp password de un solo uso) + UI en `StoreAddOnCard.tsx` | `959b635` |
+| Logout + cambio de contraseña propio del dueño, en LAS DOS superficies: POS-web (`PATCH /api/shop/employees/me/password`, Bearer) y app Android (`PATCH /api/admin/shop/employees/me/password`, sesión NextAuth) | backend `1c16a54`+`3459e96`; Android `2c56e1d` (CI "Android Build": success) |
+| Skill `/ceo-review`: auditoría de integración cruzada entre los 3 repos (contratos de API, auth, paridad de features, multi-tenant, docs, orden de deploy). Replicado en los 3 repos | `9559889` (este repo), espejo en `tienda-ropa-design` y `tiendaropa-android` |
+| Hardening de producción: `railway.json` usa `prisma migrate deploy` (ya NO `db push --accept-data-loss`), `GET /api/health` (SELECT 1) como `healthcheckPath`, `.env.example` documenta pooling (`?connection_limit=5&pool_timeout=10`) | `7d7095d`, `99a4c8a` |
 
 ## 🚧 NO hecho todavía (no asumir lo contrario)
 - Deploy real en Railway con env vars (CIPHER_MASTER_KEY, SHOP_JWT_SECRET,
   CRON_SECRET, MP/CONEKTA_WEBHOOK_SECRET, NEXT_PUBLIC_BASE_URL) + registrar
   webhooks en MP/Conekta + configurar cron hacia `/api/cron/expire-layaways`
   con `x-cron-secret`. `.env.example` ya documenta las 4 que faltaban (2026-06-19).
+- **Checklist de producción (2026-06-24), 3 puntos que requieren el dashboard
+  de Railway/Sentry, no código — no se pueden hacer desde este entorno**:
+  1. Confirmar/activar backups automáticos de Postgres en Railway.
+  2. Aplicar `?connection_limit=5&pool_timeout=10` en el `DATABASE_URL` REAL
+     de Railway (ya documentado en `.env.example`, falta aplicarlo).
+  3. Crear un ambiente de staging separado (Railway service + `DATABASE_URL`
+     propios) — hoy solo existe `main` → producción, sin entorno intermedio.
+  4. (Opcional) Integrar Sentry — requiere que el usuario cree cuenta/DSN.
 - Compilar APK por flavor en máquina del usuario:
   `./gradlew assembleDemoDebug -PdemoSHOP_TENANT_KEY=tk_...` (cloud no tiene SDK).
 - Tests automatizados (no existe suite; ver `.claude/rules/testing.md`)
@@ -122,6 +135,8 @@
 
 9. **Verificar el SCHEMA REAL antes de hacer `select` Prisma.** Casos repetidos de la sesión perdida: `OrderItem.productName` (es `name`) en `layaways/route.ts`, `Customer.firstName/lastName` (es solo `name`) en `me/route.ts`. TypeScript local no los atrapa por inferencia diferida; **el build de producción de Next.js sí**, y aborta el deploy en Railway. Antes de cualquier `select`: `grep -A20 "^model <Nombre>" admin-panel/prisma/schema.prisma`.
 10. **Railway no acepta `"builder": ""` (string vacío).** Si no sabes qué builder usar, **omite el campo entero**; Railway autodetecta Nixpacks por la presencia de `package.json`.
+11. **NUNCA usar `prisma db push --accept-data-loss` como `startCommand` de producción** (estuvo así hasta 2026-06-24, corregido a `prisma migrate deploy` en `7d7095d`). `db push` no versiona el cambio y `--accept-data-loss` puede borrar columnas/tablas silenciosamente con datos reales de tiendas. Antes de cambiar a `migrate deploy`, confirmar que no hay drift entre `schema.prisma` y `prisma/migrations/` (sin DB real para `prisma migrate diff`, revisar manualmente que cada campo nuevo del schema tenga su carpeta de migración).
+12. **Subagentes en background pueden alucinar hallazgos "críticos".** El skill `/ceo-review` reportó una "violación multi-tenant" (DTOs Android mandando `storeId`) que resultó ser el diseño correcto al verificar el código real (`canAccessStore()` ya lo valida server-side en `admin-session.ts`). Verificar SIEMPRE hallazgos de subagentes contra el código antes de actuar.
 ## 🔍 Comandos de auditoría al iniciar sesión
 ```bash
 cd /home/claude/saas-mejorado 2>/dev/null || git clone https://github.com/then-10/saas-mejorado.git
