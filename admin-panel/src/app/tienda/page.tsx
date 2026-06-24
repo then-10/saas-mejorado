@@ -229,6 +229,14 @@ export default function TiendaRopaPage() {
   // delete confirm
   const [deleteId, setDeleteId] = useState<string | null>(null)
 
+  // change password dialog
+  const [pwOpen, setPwOpen] = useState(false)
+  const [pwCurrent, setPwCurrent] = useState('')
+  const [pwNew, setPwNew] = useState('')
+  const [pwConfirm, setPwConfirm] = useState('')
+  const [pwError, setPwError] = useState('')
+  const [pwLoading, setPwLoading] = useState(false)
+
   // abono dialog
   const [abonoOpen, setAbonoOpen] = useState(false)
   const [abonoOrderId, setAbonoOrderId] = useState<string | null>(null)
@@ -364,6 +372,54 @@ export default function TiendaRopaPage() {
 
   function toggleDelivery(orderId: string) {
     setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, delivered: !o.delivered } : o)))
+  }
+
+  function closePwDialog() {
+    setPwOpen(false)
+    setPwCurrent('')
+    setPwNew('')
+    setPwConfirm('')
+    setPwError('')
+  }
+
+  async function submitChangePassword() {
+    setPwError('')
+    if (!pwCurrent.trim() || !pwNew.trim() || !pwConfirm.trim()) {
+      setPwError('Completa todos los campos')
+      return
+    }
+    if (pwNew.length < 8) {
+      setPwError('La nueva contraseña debe tener al menos 8 caracteres')
+      return
+    }
+    if (pwNew !== pwConfirm) {
+      setPwError('Las contraseñas nuevas no coinciden')
+      return
+    }
+    setPwLoading(true)
+    try {
+      const res = await fetch('/api/shop/employees/me/password', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-Key': tenantKey,
+          Authorization: `Bearer ${employeeToken}`,
+        },
+        body: JSON.stringify({ currentPassword: pwCurrent, newPassword: pwNew }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setPwError(data.error || 'No se pudo cambiar la contraseña')
+        setPwLoading(false)
+        return
+      }
+      setPwLoading(false)
+      closePwDialog()
+      showToast('Contraseña actualizada ✓')
+    } catch {
+      setPwError('Error de conexión con el servidor')
+      setPwLoading(false)
+    }
   }
 
   function openAbono(client: string, orderId: string | null) {
@@ -515,10 +571,23 @@ export default function TiendaRopaPage() {
               {demoMode ? 'Modo demo (sin conexión)' : `Conectado · ${employeeName}`}
             </p>
           </div>
-          {employeeName && (
-            <button onClick={handleLogout} className="text-white/60 hover:text-white text-xs">
-              Salir
-            </button>
+          {authReady && !demoMode && (
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                onClick={() => setPwOpen(true)}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/60 hover:text-white text-sm"
+                title="Cambiar contraseña"
+              >
+                🔑
+              </button>
+              <button
+                onClick={handleLogout}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/60 hover:text-white text-sm"
+                title="Cerrar sesión"
+              >
+                ⏻
+              </button>
+            </div>
           )}
         </div>
 
@@ -661,6 +730,21 @@ export default function TiendaRopaPage() {
           setAmount={setAbonoAmount}
           onClose={() => setAbonoOpen(false)}
           onConfirm={applyAbono}
+        />
+      )}
+
+      {pwOpen && (
+        <ChangePasswordDialog
+          current={pwCurrent}
+          setCurrent={setPwCurrent}
+          next={pwNew}
+          setNext={setPwNew}
+          confirm={pwConfirm}
+          setConfirm={setPwConfirm}
+          error={pwError}
+          loading={pwLoading}
+          onClose={closePwDialog}
+          onConfirm={submitChangePassword}
         />
       )}
 
@@ -1184,6 +1268,43 @@ function AbonoDialog({
         <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-gray-300 text-sm">Cancelar</button>
         <button onClick={onConfirm} disabled={!valid} className="flex-1 py-2 rounded-lg text-white text-sm font-semibold" style={{ backgroundColor: valid ? ACCENT : '#E9A8B4' }}>
           Confirmar
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
+function ChangePasswordDialog({
+  current, setCurrent, next, setNext, confirm, setConfirm, error, loading, onClose, onConfirm,
+}: {
+  current: string
+  setCurrent: (v: string) => void
+  next: string
+  setNext: (v: string) => void
+  confirm: string
+  setConfirm: (v: string) => void
+  error: string
+  loading: boolean
+  onClose: () => void
+  onConfirm: () => void
+}) {
+  const valid = current.trim().length > 0 && next.trim().length >= 8 && next === confirm
+  return (
+    <Modal onClose={onClose}>
+      <h3 className="text-base font-semibold text-gray-900">Cambiar contraseña</h3>
+      <Field label="Contraseña actual" value={current} onChange={setCurrent} type="password" placeholder="••••••••" />
+      <Field label="Nueva contraseña" value={next} onChange={setNext} type="password" placeholder="Mínimo 8 caracteres" />
+      <Field label="Confirmar nueva contraseña" value={confirm} onChange={setConfirm} type="password" placeholder="••••••••" />
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <div className="flex gap-2">
+        <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-gray-300 text-sm">Cancelar</button>
+        <button
+          onClick={onConfirm}
+          disabled={!valid || loading}
+          className="flex-1 py-2 rounded-lg text-white text-sm font-semibold disabled:opacity-60"
+          style={{ backgroundColor: valid ? ACCENT : '#E9A8B4' }}
+        >
+          {loading ? 'Guardando...' : 'Guardar'}
         </button>
       </div>
     </Modal>
