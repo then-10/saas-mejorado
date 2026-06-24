@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -33,6 +33,66 @@ export default function StoreAddOnCard({
   const [toggleError, setToggleError] = useState('')
   const [togglingCustomerAccess, setTogglingCustomerAccess] = useState(false)
   const [customerAccessError, setCustomerAccessError] = useState('')
+  const [ownerEmail, setOwnerEmail] = useState('')
+  const [ownerEmailInput, setOwnerEmailInput] = useState('')
+  const [savingOwnerEmail, setSavingOwnerEmail] = useState(false)
+  const [ownerEmailError, setOwnerEmailError] = useState('')
+  const [resettingPassword, setResettingPassword] = useState(false)
+  const [resetPasswordError, setResetPasswordError] = useState('')
+  const [newTempPassword, setNewTempPassword] = useState('')
+
+  useEffect(() => {
+    if (!store) return
+    let cancelled = false
+    fetch(`/api/admin/shop/stores/${store.id}/owner`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: { owner: { email: string } }) => {
+        if (cancelled) return
+        setOwnerEmail(data.owner.email)
+        setOwnerEmailInput(data.owner.email)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [store?.id])
+
+  async function saveOwnerEmail(storeId: string) {
+    if (!ownerEmailInput.trim() || ownerEmailInput.trim() === ownerEmail) return
+    setSavingOwnerEmail(true)
+    setOwnerEmailError('')
+    const res = await fetch(`/api/admin/shop/stores/${storeId}/owner`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: ownerEmailInput.trim() }),
+    })
+    const data = await res.json()
+    setSavingOwnerEmail(false)
+    if (!res.ok) {
+      setOwnerEmailError(data.error || 'Error al actualizar el email')
+      return
+    }
+    setOwnerEmail(data.owner.email)
+    setOwnerEmailInput(data.owner.email)
+  }
+
+  async function resetOwnerPassword(storeId: string) {
+    setResettingPassword(true)
+    setResetPasswordError('')
+    setNewTempPassword('')
+    const res = await fetch(`/api/admin/shop/stores/${storeId}/owner`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resetPassword: true }),
+    })
+    const data = await res.json()
+    setResettingPassword(false)
+    if (!res.ok) {
+      setResetPasswordError(data.error || 'Error al restablecer la contraseña')
+      return
+    }
+    setNewTempPassword(data.tempPassword)
+  }
 
   async function toggleActive(storeId: string, nextIsActive: boolean) {
     setTogglingActive(true)
@@ -209,6 +269,50 @@ export default function StoreAddOnCard({
           </p>
         )}
         {customerAccessError && <p className="text-xs text-red-600 mt-2">{customerAccessError}</p>}
+      </div>
+
+      <div className="mt-4 pt-3 border-t border-gray-100">
+        <p className="text-xs font-medium text-gray-700">Credenciales del dueño (app y POS web)</p>
+        <p className="text-xs text-gray-500 mt-0.5 mb-2">
+          Mismas credenciales para la app Android del dueño y el POS web (<code>/tienda</code>).
+        </p>
+        <div className="flex items-center gap-2">
+          <input
+            type="email"
+            value={ownerEmailInput}
+            onChange={(e) => setOwnerEmailInput(e.target.value)}
+            className="flex-1 min-w-0 px-2 py-1 border border-gray-300 rounded-md text-xs"
+            placeholder="email@tienda.com"
+          />
+          <button
+            onClick={() => saveOwnerEmail(store.id)}
+            disabled={savingOwnerEmail || !ownerEmailInput.trim() || ownerEmailInput.trim() === ownerEmail}
+            className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
+          >
+            {savingOwnerEmail ? 'Guardando...' : 'Guardar email'}
+          </button>
+        </div>
+        {ownerEmailError && <p className="text-xs text-red-600 mt-1">{ownerEmailError}</p>}
+
+        <div className="flex items-center justify-between gap-2 mt-2">
+          <span className="text-xs text-gray-500">Contraseña</span>
+          <button
+            onClick={() => resetOwnerPassword(store.id)}
+            disabled={resettingPassword}
+            className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-50"
+          >
+            {resettingPassword ? 'Generando...' : 'Restablecer contraseña'}
+          </button>
+        </div>
+        {resetPasswordError && <p className="text-xs text-red-600 mt-1">{resetPasswordError}</p>}
+        {newTempPassword && (
+          <div className="mt-2 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+            <p className="text-xs text-amber-700 mb-1">
+              Contraseña temporal — anótala ahora, no se mostrará de nuevo:
+            </p>
+            <p className="text-xs font-mono break-all">{newTempPassword}</p>
+          </div>
+        )}
       </div>
 
       {toggleError && <p className="text-xs text-red-600 mt-2">{toggleError}</p>}

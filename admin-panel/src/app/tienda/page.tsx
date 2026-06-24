@@ -123,7 +123,10 @@ export default function TiendaRopaPage() {
     if (!authReady) return
     let cancelled = false
     fetch('/api/shop/products', { headers: { 'X-Tenant-Key': tenantKey } })
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((r) => {
+        if (r.status === 401 || r.status === 403) return Promise.reject(new Error('unauthorized'))
+        return r.ok ? r.json() : Promise.reject(new Error('network'))
+      })
       .then((data: { products: ApiProduct[] }) => {
         if (cancelled) return
         setProducts(
@@ -139,7 +142,15 @@ export default function TiendaRopaPage() {
         )
         setDemoMode(false)
       })
-      .catch(() => setDemoMode(true))
+      .catch((err) => {
+        if (cancelled) return
+        if (err instanceof Error && err.message === 'unauthorized') {
+          handleLogout()
+          setLoginError('La tienda fue desactivada o tu sesión ya no es válida. Inicia sesión de nuevo.')
+          return
+        }
+        setDemoMode(true)
+      })
     return () => {
       cancelled = true
     }
