@@ -31,9 +31,13 @@ export const authOptions: NextAuthOptions = {
         // No es AdminUser (super-admin): puede ser dueño/empleado de una tienda
         // específica. El email de Employee solo es único por tienda, así que
         // se revisan todas las coincidencias hasta encontrar el hash correcto.
-        const employees = await prisma.employee.findMany({ where: { email, active: true } })
+        const employees = await prisma.employee.findMany({
+          where: { email, active: true },
+          include: { store: { select: { isActive: true } } },
+        })
         for (const employee of employees) {
           if (await bcrypt.compare(credentials.password, employee.passwordHash)) {
+            if (!employee.store.isActive) return null
             return {
               id: employee.id,
               email: employee.email,
