@@ -1,9 +1,11 @@
 {
-  "model": "claude-sonnet-4-6",
   "permissions": {
     "allow": [
       "Bash(npm run dev)",
-      "Bash(python bot_improved.py)"
+      "Bash(python bot_improved.py)",
+      "Bash(rm .claude/hooks/check-gstack.sh)",
+      "Bash(rmdir .claude/hooks)"
     ]
-  }
+  },
+  "model": "claude-sonnet-4-6"
 }
