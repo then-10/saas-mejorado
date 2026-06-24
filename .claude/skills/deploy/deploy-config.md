@@ -11,7 +11,7 @@
 ### Núcleo
 | Variable | Requerida | Notas |
 |---|---|---|
-| `DATABASE_URL` | Sí | PostgreSQL (Railway la inyecta) |
+| `DATABASE_URL` | Sí | PostgreSQL (Railway la inyecta). En prod agregar `?connection_limit=5&pool_timeout=10` para no agotar conexiones |
 | `NEXTAUTH_URL` | Sí | URL pública del panel |
 | `NEXTAUTH_SECRET` | Sí | `openssl rand -hex 32` |
 
@@ -38,5 +38,7 @@
 1. PostgreSQL accesible → 2. `prisma migrate deploy`/`db:push` → 3. `next start`.
 
 ## Salud
+- `GET /api/health` — healthcheck usado por Railway (`railway.json` →
+  `healthcheckPath`), hace `SELECT 1` contra Postgres.
 - `GET /api/shop/products` con un `X-Tenant-Key` válido responde 200 con JSON.
 - La home del panel responde 200.
