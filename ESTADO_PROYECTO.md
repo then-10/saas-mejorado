@@ -12,7 +12,20 @@
 ---
 
 ## 📍 Estado actual
-- **Fecha:** 2026-06-23 · **Rama:** `claude/magical-lamport-4idl8d` (pendiente merge a `main`)
+- **Fecha:** 2026-06-24 · **Rama:** `main` (commit `abf8f93`). **Nuevo endpoint
+  `POST /api/admin/shop/marketing/generate-copy`**: genera 3 copys (Instagram/
+  TikTok/Facebook) a partir de la foto de un producto, vía Gemini 1.5 Flash
+  server-side (`GEMINI_API_KEY`, nueva var en `.env.example`, AÚN sin valor real
+  en Railway — pendiente configurar antes de probar en producción). Gateado por
+  `Store.iaMarketingEnabled` (403 si está apagado) y por `canAccessStore()`
+  (404 si el producto es de otra tienda). 422 si el producto no tiene
+  `imageUrl`. Administración del add-on: el super-admin lo activa/desactiva por
+  tienda desde `/admin/tiendas/[storeId]/configuracion` (ya existía, sin
+  cambios). Reemplaza, del lado de `tienda-ropa-design`, el placeholder
+  "Próximamente" de la pantalla Social por generación real — ver su
+  `ESTADO_PROYECTO.md` (commit `f0f7aee`). **Pendiente**: configurar
+  `GEMINI_API_KEY` real en Railway y probar el flujo completo en dispositivo.
+- **Fecha anterior:** 2026-06-23 · **Rama:** `claude/magical-lamport-4idl8d` (pendiente merge a `main`)
 - **Último hito:** Nuevo endpoint `POST /api/admin/shop/customers/:id/payments` para
   cerrar la deuda técnica de "abono a cuenta" documentada en
   `tienda-ropa-design/ESTADO_PROYECTO.md` (Fase 3/4 de ese repo): la app Android no
