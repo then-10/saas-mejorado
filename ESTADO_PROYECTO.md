@@ -170,6 +170,45 @@
 - **Pendiente real**: `GEMINI_API_KEY` aún necesita valor real en Railway
   producción para que la feature funcione end-to-end (no se ha confirmado).
 
+## 📌 Sesión 2026-06-27 (cont.) — Conectar "Generación de Imágenes IA" a la app
+- Diagnóstico: "Generación de Imágenes IA" (`ClientFeature` `generacion_imagenes`,
+  DALL-E 3, sistema de bots Telegram/WhatsApp) y "IA Marketing"
+  (`Store.iaMarketingEnabled`, Gemini, ya wireado en la app) son features
+  **independientes sin código que las conecte** — solo se parecen en el nombre.
+  El usuario reportó como bug que activar la primera en el panel no se reflejaba
+  en la app: correcto, porque nunca existió esa conexión.
+- Decisión del usuario: conectar de verdad (no renombrar/aclarar texto nada más).
+- Implementado:
+  - `admin-panel/src/lib/shop/image-gen.ts` (nuevo): lógica compartida de cupo
+    diario en memoria + llamada a DALL-E 3, extraída de `/api/image-gen` para
+    reusarla también desde el endpoint nuevo (cupo compartido por `clientId`
+    entre canal bot y canal app, mismo costo de OpenAI).
+  - `/api/image-gen/route.ts` refactorizado para usar la lib compartida (sin
+    cambios de comportamiento/contrato).
+  - `/api/admin/shop/marketing/generate-image/route.ts` (nuevo): endpoint
+    session-admin (`getAdminSession`/`canAccessStore`) — body
+    `{ productId, prompt? }` — valida `ClientFeature.generacion_imagenes`
+    habilitada, lee `ClientConfig` (tamaño/calidad/estilo/watermark/límites),
+    genera con DALL-E 3, registra `ActivityLog`.
+  - `/api/admin/shop/stores/route.ts` (GET): ahora resuelve `imageGenEnabled`
+    por tienda (lookup `ClientFeature` por `store.clientId`) y lo incluye en
+    cada item de `stores` — es el endpoint real que consume
+    `StoreRepositoryImpl.getStore()` en la app (no `/api/shop/store`, que
+    también se actualizó por consistencia pero no es el path usado por la app).
+- App Android (`tienda-ropa-design`): `Store.imageGenEnabled`,
+  `AdminStoreDto.imageGenEnabled`, nuevos DTOs
+  `GenerateMarketingImageRequestDto`/`ResponseDto`, método Retrofit
+  `generateMarketingImage`, método de repo con mapeo de errores (403/404/429),
+  `SocialViewModel` (estado `imageGenEnabled`/`imagePrompt`/`isGeneratingImage`/
+  `generatedImageUrl`/`imageError` + `generateImage()`), `SocialScreen` con
+  gating independiente por feature (antes solo gateaba por `iaMarketingEnabled`)
+  y nueva sección UI (prompt opcional + botón + `AsyncImage`).
+- Verificado: `npx tsc --noEmit` (admin-panel) → 0 errores. Balance de
+  llaves/paréntesis verificado manualmente en los `.kt` editados (sin Android
+  SDK en este entorno — falta validar build real en la máquina del usuario).
+- **Pendiente real**: confirmar `IMAGE_GEN_API_KEY` configurado en Railway
+  producción (ya lo requería el canal bot; ahora también lo necesita la app).
+
 ## 🔍 Comandos de auditoría al iniciar sesión
 ```bash
 cd /home/claude/saas-mejorado 2>/dev/null || git clone https://github.com/then-10/saas-mejorado.git
