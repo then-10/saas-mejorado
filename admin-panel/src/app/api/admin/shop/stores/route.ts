@@ -32,7 +32,18 @@ export async function GET() {
     )
   }
 
-  return NextResponse.json({ stores })
+  // imageGenEnabled vive en ClientFeature (sistema compartido con los bots de
+  // Telegram/WhatsApp), no en Store — se resuelve aquí por clientId.
+  const imageFeatures = await prisma.clientFeature.findMany({
+    where: { clientId: { in: stores.map((s) => s.clientId) }, featureKey: 'generacion_imagenes' },
+  })
+  const imageGenByClientId = new Map(imageFeatures.map((f) => [f.clientId, f.enabled]))
+  const storesWithImageGen = stores.map((s) => ({
+    ...s,
+    imageGenEnabled: imageGenByClientId.get(s.clientId) ?? false,
+  }))
+
+  return NextResponse.json({ stores: storesWithImageGen })
 }
 
 /**

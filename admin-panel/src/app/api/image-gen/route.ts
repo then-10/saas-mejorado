@@ -2,28 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-
-// In-memory daily counter — resets with each deploy.
-// For production at scale, move this to Redis.
-const dailyUsage = new Map<string, { count: number; date: string }>()
-
-function getTodayKey(): string {
-  return new Date().toISOString().slice(0, 10) // YYYY-MM-DD
-}
-
-function getUsage(clientId: string, today: string): number {
-  const entry = dailyUsage.get(clientId)
-  if (!entry || entry.date !== today) return 0
-  return entry.count
-}
-
-// Returns the new count after increment.
-function incrementUsage(clientId: string, today: string): number {
-  const current = dailyUsage.get(clientId)
-  const newCount = (!current || current.date !== today) ? 1 : current.count + 1
-  dailyUsage.set(clientId, { count: newCount, date: today })
-  return newCount
-}
+import { getDailyUsage, incrementDailyUsage, getTodayKey, generateImageWithDalle } from '@/lib/shop/image-gen'
 
 function isAuthorized(req: NextRequest): boolean {
   // Bot-to-server calls use a shared secret in the Authorization header.
@@ -103,12 +82,12 @@ export async function POST(req: NextRequest) {
 
   // Atomic check-and-increment: both run synchronously before any await,
   // so concurrent requests in the same Node.js process cannot both pass.
-  if (dailyLimit > 0 && getUsage(clientId, today) >= dailyLimit) {
+  if (dailyLimit > 0 && getDailyUsage(clientId, today) >= dailyLimit) {
     const limitMsg = config['limit_reached_message'] ?? 'Límite diario de imágenes alcanzado.'
     return NextResponse.json({ error: limitMsg, limitReached: true }, { status: 429 })
   }
   // Increment now — before the async DALL-E call — to hold the slot.
-  const usageAfter = incrementUsage(clientId, today)
+  const usageAfter = incrementDailyUsage(clientId, today)
 
   // Build the final prompt — strip quotes from watermark to prevent prompt injection
   const safeWatermark = watermark.replace(/["']/g, '')
@@ -123,34 +102,7 @@ export async function POST(req: NextRequest) {
   // Call OpenAI DALL-E 3
   let imageUrl: string
   try {
-    const openaiRes = await fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'dall-e-3',
-        prompt: finalPrompt,
-        n: 1,
-        size,
-        quality,
-        style,
-      }),
-    })
-
-    if (!openaiRes.ok) {
-      const errBody = await openaiRes.json().catch(() => ({}))
-      console.error('OpenAI error:', errBody)
-      return NextResponse.json(
-        { error: config['error_message'] ?? 'No se pudo generar la imagen. Intenta con otra descripción.' },
-        { status: 502 }
-      )
-    }
-
-    const openaiData = await openaiRes.json()
-    imageUrl = openaiData.data?.[0]?.url
-    if (!imageUrl) throw new Error('No image URL in response')
+    imageUrl = await generateImageWithDalle({ apiKey, prompt: finalPrompt, size, quality, style })
   } catch (err) {
     console.error('Image generation error:', err)
     return NextResponse.json(
@@ -192,7 +144,7 @@ export async function GET(req: NextRequest) {
 
   const today = getTodayKey()
   return NextResponse.json({
-    usageToday: getUsage(clientId, today),
+    usageToday: getDailyUsage(clientId, today),
     date: today,
   })
 }
