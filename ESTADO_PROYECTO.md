@@ -150,6 +150,26 @@
 10. **Railway no acepta `"builder": ""` (string vacío).** Si no sabes qué builder usar, **omite el campo entero**; Railway autodetecta Nixpacks por la presencia de `package.json`.
 11. **NUNCA usar `prisma db push --accept-data-loss` como `startCommand` de producción** (estuvo así hasta 2026-06-24, corregido a `prisma migrate deploy` en `7d7095d`). `db push` no versiona el cambio y `--accept-data-loss` puede borrar columnas/tablas silenciosamente con datos reales de tiendas. Antes de cambiar a `migrate deploy`, confirmar que no hay drift entre `schema.prisma` y `prisma/migrations/` (sin DB real para `prisma migrate diff`, revisar manualmente que cada campo nuevo del schema tenga su carpeta de migración).
 12. **Subagentes en background pueden alucinar hallazgos "críticos".** El skill `/ceo-review` reportó una "violación multi-tenant" (DTOs Android mandando `storeId`) que resultó ser el diseño correcto al verificar el código real (`canAccessStore()` ya lo valida server-side en `admin-session.ts`). Verificar SIEMPRE hallazgos de subagentes contra el código antes de actuar.
+## 📌 Sesión 2026-06-27 — Hardening de generate-copy (IA Marketing)
+- Revisión con agente `code-reviewer` del endpoint
+  `admin-panel/src/app/api/admin/shop/marketing/generate-copy/route.ts`
+  (feature de IA Marketing añadida en sesiones previas, commits `abf8f93`/`f0f7aee`).
+- Bugs encontrados y corregidos en `e5fcb2a`:
+  - 🔴 SSRF: `product.imageUrl` se descargaba sin validar host → agregado
+    `isSafeImageUrl()` (bloquea `localhost`, `127.x`, `10.x`, `192.168.x`,
+    `172.16-31.x`, `169.254.169.254`, `.internal`, `::1`, exige `https:`).
+  - 🔴 API key de Gemini iba en query string (se filtra en logs) → movida a
+    header `x-goog-api-key`.
+  - 🟡 Sin timeout en `fetch` de imagen ni de Gemini → `AbortController` +
+    15s.
+  - 🟡 Sin límite de tamaño de imagen → 8MB máx, validado por
+    `content-length` y por bytes reales descargados.
+  - 🟡 Respuesta de Gemini se confiaba ciegamente (`?? []`) → `isGeminiCopy()`
+    valida shape en runtime antes de usar los copys.
+- Verificado con `npx tsc --noEmit` (admin-panel) → 0 errores.
+- **Pendiente real**: `GEMINI_API_KEY` aún necesita valor real en Railway
+  producción para que la feature funcione end-to-end (no se ha confirmado).
+
 ## 🔍 Comandos de auditoría al iniciar sesión
 ```bash
 cd /home/claude/saas-mejorado 2>/dev/null || git clone https://github.com/then-10/saas-mejorado.git
