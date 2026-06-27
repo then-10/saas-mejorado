@@ -34,6 +34,46 @@ interface GeminiCopy {
   hashtags: string[]
 }
 
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024
+const FETCH_TIMEOUT_MS = 15000
+
+function isGeminiCopy(v: unknown): v is GeminiCopy {
+  if (!v || typeof v !== 'object') return false
+  const c = v as Record<string, unknown>
+  return (
+    typeof c.platform === 'string' &&
+    typeof c.hook === 'string' &&
+    typeof c.body === 'string' &&
+    Array.isArray(c.hashtags) &&
+    c.hashtags.every((h) => typeof h === 'string')
+  )
+}
+
+/** Solo permite descargar imágenes https de un host público (bloquea SSRF a redes internas/metadata). */
+function isSafeImageUrl(raw: string): boolean {
+  let url: URL
+  try {
+    url = new URL(raw)
+  } catch {
+    return false
+  }
+  if (url.protocol !== 'https:') return false
+  const host = url.hostname.toLowerCase()
+  if (
+    host === 'localhost' ||
+    host === '169.254.169.254' ||
+    host.endsWith('.internal') ||
+    /^127\./.test(host) ||
+    /^10\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) ||
+    host === '::1'
+  ) {
+    return false
+  }
+  return true
+}
+
 /** POST /api/admin/shop/marketing/generate-copy — body: { productId } */
 export async function POST(req: NextRequest) {
   const session = await getAdminSession()
@@ -80,16 +120,34 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  if (!isSafeImageUrl(product.imageUrl)) {
+    console.error('imageUrl rechazada por isSafeImageUrl:', product.imageUrl)
+    return NextResponse.json(
+      { error: 'No se pudo leer la imagen del producto.' },
+      { status: 502 }
+    )
+  }
+
   let base64Image: string
   let mimeType: string
   try {
-    const imageRes = await fetch(product.imageUrl)
+    const imageController = new AbortController()
+    const imageTimeout = setTimeout(() => imageController.abort(), FETCH_TIMEOUT_MS)
+    let imageRes: Response
+    try {
+      imageRes = await fetch(product.imageUrl, { signal: imageController.signal })
+    } finally {
+      clearTimeout(imageTimeout)
+    }
     if (!imageRes.ok) throw new Error(`status ${imageRes.status}`)
+    const contentLength = Number(imageRes.headers.get('content-length') ?? '0')
+    if (contentLength > MAX_IMAGE_BYTES) throw new Error('imagen demasiado grande')
     mimeType = imageRes.headers.get('content-type') ?? 'image/jpeg'
     const buffer = await imageRes.arrayBuffer()
+    if (buffer.byteLength > MAX_IMAGE_BYTES) throw new Error('imagen demasiado grande')
     base64Image = Buffer.from(buffer).toString('base64')
   } catch (err) {
-    console.error('No se pudo descargar la imagen del producto:', err)
+    console.error('No se pudo descargar la imagen del producto:', err instanceof Error ? err.message : err)
     return NextResponse.json(
       { error: 'No se pudo leer la imagen del producto.' },
       { status: 502 }
@@ -98,28 +156,36 @@ export async function POST(req: NextRequest) {
 
   let copies: GeminiCopy[]
   try {
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { inlineData: { mimeType, data: base64Image } },
-                { text: `${SYSTEM_PROMPT}\n\nNombre del producto: "${product.name}"` },
-              ],
-            },
-          ],
-          generationConfig: { response_mime_type: 'application/json' },
-        }),
-      }
-    )
+    const geminiController = new AbortController()
+    const geminiTimeout = setTimeout(() => geminiController.abort(), FETCH_TIMEOUT_MS)
+    let geminiRes: Response
+    try {
+      geminiRes = await fetch(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+          signal: geminiController.signal,
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { inlineData: { mimeType, data: base64Image } },
+                  { text: `${SYSTEM_PROMPT}\n\nNombre del producto: "${product.name}"` },
+                ],
+              },
+            ],
+            generationConfig: { response_mime_type: 'application/json' },
+          }),
+        }
+      )
+    } finally {
+      clearTimeout(geminiTimeout)
+    }
 
     if (!geminiRes.ok) {
       const errBody = await geminiRes.json().catch(() => ({}))
-      console.error('Gemini error:', errBody)
+      console.error('Gemini error status:', geminiRes.status, JSON.stringify(errBody).slice(0, 500))
       return NextResponse.json(
         { error: 'No se pudieron generar los copys. Intenta de nuevo.' },
         { status: 502 }
@@ -130,11 +196,12 @@ export async function POST(req: NextRequest) {
     const jsonText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text
     if (!jsonText) throw new Error('Gemini no retornó contenido')
 
-    const parsed = JSON.parse(jsonText) as { copies?: GeminiCopy[] }
-    copies = parsed.copies ?? []
-    if (copies.length === 0) throw new Error('Gemini generó 0 copys')
+    const parsed = JSON.parse(jsonText) as { copies?: unknown }
+    const rawCopies = Array.isArray(parsed.copies) ? parsed.copies : []
+    copies = rawCopies.filter(isGeminiCopy)
+    if (copies.length === 0) throw new Error('Gemini generó 0 copys válidos')
   } catch (err) {
-    console.error('Error generando marketing copy:', err)
+    console.error('Error generando marketing copy:', err instanceof Error ? err.message : err)
     return NextResponse.json(
       { error: 'Error generando los copys. Intenta de nuevo.' },
       { status: 502 }
